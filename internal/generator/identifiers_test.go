@@ -15,7 +15,6 @@ func TestUUIDv4Generation(t *testing.T) {
 			t.Fatalf("iteration %d: failed to generate UUIDv4: %v", i, err)
 		}
 
-		// Chequeo de colisión
 		if _, exists := seen[uuid]; exists {
 			t.Fatalf("collision detected at iteration %d: %s", i, uuid)
 		}
@@ -34,7 +33,7 @@ func TestUUIDv4Generation(t *testing.T) {
 			t.Fatalf("expected version 4 at index 14, got %c in %s", uuid[14], uuid)
 		}
 
-		// Variante RFC 4122: carácter en índice 19 debe ser '8', '9', 'a', o 'b'
+		// Variante RFC 4122: bits 6-7 en byte 8 valen 10 -> caracter en índice 19 es 8, 9, a, o b
 		variantChar := uuid[19]
 		if variantChar != '8' && variantChar != '9' && variantChar != 'a' && variantChar != 'b' {
 			t.Fatalf("invalid RFC 4122 variant character %c at index 19 in %s", variantChar, uuid)
@@ -58,7 +57,19 @@ func TestSyntheticCatalogGenerators(t *testing.T) {
 		t.Fatalf("unexpected format for sub UID: %s", subUID)
 	}
 
+	evtUID := GenerateEventUID()
+	if !strings.HasPrefix(evtUID, "EVT-") || len(evtUID) != 40 {
+		t.Fatalf("unexpected format for event UID: %s", evtUID)
+	}
+
 	if len(DefaultSubjectCatalog) < 3 {
 		t.Fatalf("expected default catalog items, got %d", len(DefaultSubjectCatalog))
+	}
+
+	expectedSubjects := []string{"Criptografía y Seguridad", "Bases de Datos", "Estructuras de Datos"}
+	for _, name := range expectedSubjects {
+		if uid, ok := PreloadedSubjectCatalog[name]; !ok || uid == "" {
+			t.Fatalf("missing preloaded subject mapping for: %s", name)
+		}
 	}
 }
