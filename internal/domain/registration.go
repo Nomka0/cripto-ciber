@@ -57,6 +57,10 @@ type GradeRegistrationEvent struct {
 	PayloadHash string                   `json:"payload_hash,omitempty"`
 }
 
+func (e GradeRegistrationEvent) GetEventID() string      { return e.EventID }
+func (e GradeRegistrationEvent) GetEventType() EventType { return e.EventType }
+func (e GradeRegistrationEvent) GetPayloadHash() string  { return e.PayloadHash }
+
 func NewGradeRegistrationEvent(eventID string, payload GradeRegistrationPayload) (*GradeRegistrationEvent, error) {
 	if strings.TrimSpace(eventID) == "" {
 		return nil, ErrEmptyEventID
