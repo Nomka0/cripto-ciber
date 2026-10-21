@@ -114,3 +114,14 @@ func (e BaseAcademicEvent) Validate() error {
 	}
 	return nil
 }
+
+// GenericEvent modela el contrato polimórfico común para eventos académicos
+type GenericEvent interface {
+	GetEventID() string
+	GetEventType() EventType
+	GetPayloadHash() string
+}
+
+func (e BaseAcademicEvent) GetEventID() string      { return e.EventID }
+func (e BaseAcademicEvent) GetEventType() EventType { return e.Type }
+func (e BaseAcademicEvent) GetPayloadHash() string  { return "" }

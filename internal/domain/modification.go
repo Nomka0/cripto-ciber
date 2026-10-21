@@ -70,6 +70,11 @@ type GradeModificationEvent struct {
 	PayloadHash string                   `json:"payload_hash,omitempty"`
 }
 
+func (e GradeModificationEvent) GetEventID() string          { return e.EventID }
+func (e GradeModificationEvent) GetEventType() EventType     { return e.EventType }
+func (e GradeModificationEvent) GetPayloadHash() string      { return e.PayloadHash }
+func (e *GradeModificationEvent) SetPayloadHash(hash string) { e.PayloadHash = hash }
+
 func NewGradeModificationEvent(eventID string, payload GradeModificationPayload) (*GradeModificationEvent, error) {
 	if strings.TrimSpace(eventID) == "" {
 		return nil, ErrEmptyEventID
