@@ -9,6 +9,11 @@ import (
 	"taller2-criptografia/internal/domain"
 )
 
+type StateTracker struct {
+	existingGrades []domain.GradeRegistrationPayload
+	latestByTarget map[string]int // key -> index in existingGrades
+}
+
 type EventOrchestrator struct {
 	gradeGen     GradeGenerator
 	r            *rand.Rand
@@ -19,6 +24,10 @@ type EventOrchestrator struct {
 	evalPool     []string
 	reasonsPool  []string
 	baseTime     time.Time
+}
+
+func targetKey(student, subject, eval string) string {
+	return fmt.Sprintf("%s|%s|%s", student, subject, eval)
 }
 
 func NewEventOrchestrator(gradeGen GradeGenerator, r *rand.Rand) *EventOrchestrator {
@@ -42,7 +51,7 @@ func NewEventOrchestrator(gradeGen GradeGenerator, r *rand.Rand) *EventOrchestra
 			"Calificación de entrega extemporánea autorizada por coordinación",
 			"Actualización de nota por sustentación oral satisfactoria",
 		},
-		baseTime: time.Now().UTC().Add(-24 * time.Hour),
+		baseTime: time.Now().UTC().Add(-30 * 24 * time.Hour), // Iniciar 30 días en el pasado
 	}
 }
 
@@ -66,16 +75,17 @@ func (o *EventOrchestrator) GenerateSequence(n int) ([]any, error) {
 	}
 
 	events := make([]any, 0, n)
-	// pool en memoria para servir de base a modificaciones
-	// guardamos el estado mas reciente de cada calificacion
-	registeredGrades := make([]domain.GradeRegistrationPayload, 0)
+	state := StateTracker{
+		existingGrades: make([]domain.GradeRegistrationPayload, 0),
+		latestByTarget: make(map[string]int),
+	}
 
 	currTime := o.baseTime
 
 	for i := 1; i <= n; i++ {
 		currTime = currTime.Add(time.Duration(1+o.randIntN(10)) * time.Minute)
 
-		shouldRegister := len(registeredGrades) == 0 || o.randFloat() < o.regProb
+		shouldRegister := len(state.existingGrades) == 0 || o.randFloat() < o.regProb
 
 		if shouldRegister {
 			student := o.studentPool[o.randIntN(len(o.studentPool))]
@@ -98,12 +108,19 @@ func (o *EventOrchestrator) GenerateSequence(n int) ([]any, error) {
 				return nil, fmt.Errorf("error generating registration event: %w", err)
 			}
 
-			registeredGrades = append(registeredGrades, payload)
+			k := targetKey(student, subject, eval)
+			if existingIdx, exists := state.latestByTarget[k]; exists {
+				state.existingGrades[existingIdx] = payload
+			} else {
+				state.latestByTarget[k] = len(state.existingGrades)
+				state.existingGrades = append(state.existingGrades, payload)
+			}
+
 			events = append(events, evt)
 		} else {
-			// Seleccionar registro previo
-			idx := o.randIntN(len(registeredGrades))
-			prev := registeredGrades[idx]
+			// Seleccionar registro previo aleatorio del pool único por estudiante/materia/evaluación
+			idx := o.randIntN(len(state.existingGrades))
+			prev := state.existingGrades[idx]
 
 			// Generar nueva nota distinta
 			var newGrade float64
@@ -133,9 +150,9 @@ func (o *EventOrchestrator) GenerateSequence(n int) ([]any, error) {
 				return nil, fmt.Errorf("error generating modification event: %w", err)
 			}
 
-			// Actualizar nota en el pool para reflejar el estado actual
-			registeredGrades[idx].Grade = newGrade
-			registeredGrades[idx].Timestamp = currTime
+			// Actualizar la nota en memoria para reflejar el cambio acumulativo
+			state.existingGrades[idx].Grade = newGrade
+			state.existingGrades[idx].Timestamp = currTime
 
 			events = append(events, evt)
 		}
