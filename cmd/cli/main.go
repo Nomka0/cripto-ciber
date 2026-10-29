@@ -54,6 +54,7 @@ func main() {
 				return err
 			}
 			views.RenderResultsView(res)
+			views.RenderVerdictView(res)
 			Success("Flujo completo ejecutado con éxito. Preservación: %v", res.AuditReport.PreservationSuccess)
 			return nil
 		},

@@ -38,6 +38,18 @@ type PipelineResult struct {
 // PipelineResults es un alias para PipelineResult para compatibilidad.
 type PipelineResults = PipelineResult
 
+// IntegrityMatches evalúa si la integridad criptográfica fue preservada fielmente
+// tanto a nivel de hash global como a nivel granular de registros.
+func (r *PipelineResult) IntegrityMatches() bool {
+	if r == nil {
+		return false
+	}
+	if r.AuditReport != nil {
+		return r.AuditReport.PreservationSuccess && r.AuditReport.GlobalComparison.Matches
+	}
+	return r.PlaintextLogHash != "" && r.PlaintextLogHash == r.DecryptedLogHash
+}
+
 // PipelineOrchestrator coordina el ciclo de vida completo de protección de logs en reposo.
 type PipelineOrchestrator struct {
 	outputDir string
