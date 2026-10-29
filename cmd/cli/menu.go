@@ -24,10 +24,33 @@ var menuOptions = []MenuOption{
 	OptionEncryptLog, OptionDecryptLog, OptionAuditReport, OptionExit,
 }
 
+var currentMenuDefault MenuOption = OptionFullPipeline
+
+// NextMenuOption calcula la siguiente opción natural del flujo guiado por pasos.
+func NextMenuOption(opt MenuOption) MenuOption {
+	switch opt {
+	case OptionDefineVolume:
+		return OptionGenerateEvents
+	case OptionGenerateEvents:
+		return OptionEncryptLog
+	case OptionEncryptLog:
+		return OptionDecryptLog
+	case OptionDecryptLog:
+		return OptionAuditReport
+	case OptionAuditReport:
+		return OptionExit
+	case OptionFullPipeline:
+		return OptionExit
+	default:
+		return OptionFullPipeline
+	}
+}
+
 // MenuHandlers asocia cada opción del menú con la acción que ejecuta.
 type MenuHandlers map[MenuOption]func() error
 
 // ShowMainMenu despliega el selector interactivo (flechas ↑/↓ + Enter) y retorna la opción elegida.
+// El cursor se posiciona automáticamente en currentMenuDefault para avanzar secuencialmente.
 // Ctrl+C retorna terminal.InterruptErr.
 func ShowMainMenu() (MenuOption, error) {
 	labels := make([]string, len(menuOptions))
@@ -35,10 +58,16 @@ func ShowMainMenu() (MenuOption, error) {
 		labels[i] = string(o)
 	}
 
+	def := string(currentMenuDefault)
+	if def == "" {
+		def = string(OptionFullPipeline)
+	}
+
 	var choice string
 	prompt := &survey.Select{
 		Message:  "¿Qué operación desea ejecutar?",
 		Options:  labels,
+		Default:  def,
 		PageSize: len(labels),
 	}
 	if err := survey.AskOne(prompt, &choice, SurveyTheme()); err != nil {
@@ -49,6 +78,7 @@ func ShowMainMenu() (MenuOption, error) {
 
 // RunMenuLoop mantiene la aplicación abierta hasta elegir "Salir" o presionar Ctrl+C.
 // El error de un handler se muestra sin cerrar la aplicación.
+// Tras una ejecución exitosa, posiciona el cursor en la siguiente opción del flujo secuencial.
 func RunMenuLoop(ask func() (MenuOption, error), handlers MenuHandlers) error {
 	for {
 		option, err := ask()
@@ -71,6 +101,8 @@ func RunMenuLoop(ask func() (MenuOption, error), handlers MenuHandlers) error {
 		}
 		if err := handler(); err != nil {
 			Error("%s: %v", option, err)
+		} else {
+			currentMenuDefault = NextMenuOption(option)
 		}
 	}
 }

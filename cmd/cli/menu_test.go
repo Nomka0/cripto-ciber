@@ -63,3 +63,57 @@ func TestRunMenuLoopPropagatesPromptError(t *testing.T) {
 		t.Errorf("expected prompt error, got %v", err)
 	}
 }
+
+func TestNextMenuOption(t *testing.T) {
+	cases := []struct {
+		in   MenuOption
+		want MenuOption
+	}{
+		{OptionDefineVolume, OptionGenerateEvents},
+		{OptionGenerateEvents, OptionEncryptLog},
+		{OptionEncryptLog, OptionDecryptLog},
+		{OptionDecryptLog, OptionAuditReport},
+		{OptionAuditReport, OptionExit},
+		{OptionFullPipeline, OptionExit},
+		{MenuOption("unknown"), OptionFullPipeline},
+	}
+
+	for _, c := range cases {
+		got := NextMenuOption(c.in)
+		if got != c.want {
+			t.Errorf("NextMenuOption(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}
+
+func TestRunMenuLoopUpdatesDefaultOnSuccess(t *testing.T) {
+	currentMenuDefault = OptionDefineVolume
+	handlers := MenuHandlers{
+		OptionDefineVolume: func() error { return nil },
+	}
+
+	err := RunMenuLoop(scriptedAsk(OptionDefineVolume, OptionExit), handlers)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if currentMenuDefault != OptionGenerateEvents {
+		t.Errorf("expected next default %q, got %q", OptionGenerateEvents, currentMenuDefault)
+	}
+}
+
+func TestRunMenuLoopRetainsDefaultOnError(t *testing.T) {
+	currentMenuDefault = OptionDefineVolume
+	handlers := MenuHandlers{
+		OptionDefineVolume: func() error { return errors.New("input validation failed") },
+	}
+
+	err := RunMenuLoop(scriptedAsk(OptionDefineVolume, OptionExit), handlers)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if currentMenuDefault != OptionDefineVolume {
+		t.Errorf("expected default retained %q, got %q", OptionDefineVolume, currentMenuDefault)
+	}
+}
