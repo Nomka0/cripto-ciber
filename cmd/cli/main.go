@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"taller2-criptografia/cmd/cli/views"
 	"taller2-criptografia/internal/pipeline"
 )
 
@@ -52,6 +53,7 @@ func main() {
 			if err != nil {
 				return err
 			}
+			views.RenderResultsView(res)
 			Success("Flujo completo ejecutado con éxito. Preservación: %v", res.AuditReport.PreservationSuccess)
 			return nil
 		},

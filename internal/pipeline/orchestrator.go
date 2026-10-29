@@ -35,6 +35,9 @@ type PipelineResult struct {
 	AuditReport             *audit.AuditReport         `json:"audit_report"`
 }
 
+// PipelineResults es un alias para PipelineResult para compatibilidad.
+type PipelineResults = PipelineResult
+
 // PipelineOrchestrator coordina el ciclo de vida completo de protección de logs en reposo.
 type PipelineOrchestrator struct {
 	outputDir string
