@@ -36,6 +36,11 @@ func Error(format string, a ...any) {
 	fmt.Printf("%s✖ %s%s\n", ansiRed, fmt.Sprintf(format, a...), ansiReset)
 }
 
+// Step imprime un paso del pipeline con numeración y descripción para explainability.
+func Step(step int, title string, details string) {
+	fmt.Printf("  %s[%02d]%s %s%-34s%s %s\n", ansiBold, step, ansiReset, ansiCyan, title, ansiReset, details)
+}
+
 // SurveyTheme aplica los íconos y colores del tema a los prompts de survey.
 // Uso: survey.AskOne(prompt, &answer, SurveyTheme())
 func SurveyTheme() survey.AskOpt {
