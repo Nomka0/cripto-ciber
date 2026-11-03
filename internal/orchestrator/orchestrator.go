@@ -11,5 +11,8 @@ type PipelineResult = pipeline.PipelineResult
 // PipelineOrchestrator es un alias para pipeline.PipelineOrchestrator.
 type PipelineOrchestrator = pipeline.PipelineOrchestrator
 
+// StepListener es un alias para pipeline.StepListener.
+type StepListener = pipeline.StepListener
+
 // NewPipelineOrchestrator reexporta el constructor de pipeline.
 var NewPipelineOrchestrator = pipeline.NewPipelineOrchestrator

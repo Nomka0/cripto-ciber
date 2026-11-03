@@ -49,10 +49,15 @@ func main() {
 				volume = n
 			}
 			Success("Iniciando ejecución del flujo completo con %d eventos...", volume)
+			fmt.Printf("\n%s--- 🔄 TRAZABILIDAD SECUENCIAL DE PASOS (EXPLAINABILITY) ---%s\n", ansiBold, ansiReset)
+			orch.SetStepListener(Step)
+			defer orch.SetStepListener(nil)
+
 			res, err := orch.Run(volume)
 			if err != nil {
 				return err
 			}
+			fmt.Println()
 			views.RenderResultsView(res)
 			views.RenderVerdictView(res)
 			Success("Flujo completo ejecutado con éxito. Preservación: %v", res.AuditReport.PreservationSuccess)

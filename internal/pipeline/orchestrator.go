@@ -38,6 +38,9 @@ type PipelineResult struct {
 // PipelineResults es un alias para PipelineResult para compatibilidad.
 type PipelineResults = PipelineResult
 
+// StepListener define la firma para callbacks de trazabilidad y explainability en cada paso del pipeline.
+type StepListener func(step int, title string, details string)
+
 // IntegrityMatches evalúa si la integridad criptográfica fue preservada fielmente
 // tanto a nivel de hash global como a nivel granular de registros.
 func (r *PipelineResult) IntegrityMatches() bool {
@@ -52,9 +55,10 @@ func (r *PipelineResult) IntegrityMatches() bool {
 
 // PipelineOrchestrator coordina el ciclo de vida completo de protección de logs en reposo.
 type PipelineOrchestrator struct {
-	outputDir string
-	generator *generator.EventOrchestrator
-	hasher    crypto.GlobalHasher
+	outputDir    string
+	generator    *generator.EventOrchestrator
+	hasher       crypto.GlobalHasher
+	stepListener StepListener
 }
 
 // NewPipelineOrchestrator inicializa un orquestador con directorio base de artefactos y PRNG opcional.
@@ -72,6 +76,17 @@ func NewPipelineOrchestrator(outputDir string, r *rand.Rand) *PipelineOrchestrat
 // OutputDir retorna el directorio donde residen los artefactos.
 func (p *PipelineOrchestrator) OutputDir() string {
 	return p.outputDir
+}
+
+// SetStepListener configura una función de callback para emitir el progreso de cada paso del pipeline.
+func (p *PipelineOrchestrator) SetStepListener(listener StepListener) {
+	p.stepListener = listener
+}
+
+func (p *PipelineOrchestrator) notify(step int, title, details string) {
+	if p.stepListener != nil {
+		p.stepListener(step, title, details)
+	}
 }
 
 // GenerateAndConsolidate ejecuta los Pasos 2, 3 y 4:
@@ -236,29 +251,40 @@ func (p *PipelineOrchestrator) Run(volume int) (*PipelineResult, error) {
 		return nil, ErrInvalidVolume
 	}
 
+	p.notify(1, "Definición del Volumen", fmt.Sprintf("Configurado lote de %d eventos académicos", volume))
+
 	// Pasos 2-4
 	log, regCount, modCount, err := p.GenerateAndConsolidate(volume)
 	if err != nil {
 		return nil, err
 	}
+	p.notify(2, "Generación Aleatoria", fmt.Sprintf("%d eventos generados (%d registros, %d modificaciones con notas uniformes 0.0-5.0)", log.TotalEvents, regCount, modCount))
+	p.notify(3, "Hash del Payload", "Inyección de digest SHA-256 en cada evento excluyendo payload_hash (sin circularidad)")
+	p.notify(4, "Consolidación Estructurada", fmt.Sprintf("Log original persistido en %s", storage.GetPlaintextLogPath(p.outputDir)))
 
 	// Pasos 5-7
 	plainDigest, _, encDigest, err := p.EncryptAndHash()
 	if err != nil {
 		return nil, err
 	}
+	p.notify(5, "Hash del Log en Claro", fmt.Sprintf("Digest SHA-256 respaldado en %s", storage.GetPlaintextLogHashPath(p.outputDir)))
+	p.notify(6, "Cifrado en Reposo", fmt.Sprintf("AES-256-GCM aplicado; artefacto: %s y metadatos: %s", storage.GetEncryptedLogPath(p.outputDir), storage.GetCryptoMetadataPath(p.outputDir)))
+	p.notify(7, "Hash del Log Cifrado", fmt.Sprintf("Digest SHA-256 respaldado en %s", storage.GetEncryptedLogHashPath(p.outputDir)))
 
 	// Pasos 8-9
 	_, decDigest, err := p.DecryptAndHash()
 	if err != nil {
 		return nil, err
 	}
+	p.notify(8, "Descifrado y Recuperación", fmt.Sprintf("Autenticación GCM validada; contenido restaurado en %s", storage.GetDecryptedLogPath(p.outputDir)))
+	p.notify(9, "Hash del Log Descifrado", fmt.Sprintf("Digest SHA-256 respaldado en %s", storage.GetDecryptedLogHashPath(p.outputDir)))
 
 	// Paso 10
 	auditReport, err := p.Audit()
 	if err != nil {
 		return nil, err
 	}
+	p.notify(10, "Auditoría Forense", fmt.Sprintf("Comparación en tiempo constante y verificación de %d registros (válidos: %d, corruptos: %d)", auditReport.RecordsVerification.TotalEvents, auditReport.RecordsVerification.ValidEvents, auditReport.RecordsVerification.CorruptedEvents))
 
 	return &PipelineResult{
 		TotalEvents:             log.TotalEvents,

@@ -243,3 +243,26 @@ func TestPipelineOrchestrator_DefaultOutputDir(t *testing.T) {
 		t.Errorf("expected default output dir %s, got %s", storage.DefaultOutputDir, orch.OutputDir())
 	}
 }
+
+func TestPipelineOrchestrator_StepListener(t *testing.T) {
+	tempDir := t.TempDir()
+	orch := NewPipelineOrchestrator(tempDir, nil)
+
+	var recordedSteps []int
+	orch.SetStepListener(func(step int, title, details string) {
+		recordedSteps = append(recordedSteps, step)
+	})
+
+	if _, err := orch.Run(10); err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+
+	if len(recordedSteps) != 10 {
+		t.Fatalf("expected 10 steps recorded, got %d", len(recordedSteps))
+	}
+	for i := 1; i <= 10; i++ {
+		if recordedSteps[i-1] != i {
+			t.Errorf("step index mismatch at pos %d: expected %d, got %d", i-1, i, recordedSteps[i-1])
+		}
+	}
+}
