@@ -279,13 +279,13 @@ sequenceDiagram
 ### Slide 13: Declaración de Autoría y Uso Responsable de IA
 - **Título:** Declaración de Autoría y Uso Responsable de Inteligencia Artificial
 - **Metodología y Áreas de Asistencia:**
-  - *Herramientas:* Google Antigravity (Gemini 3.8 Flash) y Anthropic Claude Code, bajo estricto marco de supervisión humana.
+  - *Herramientas:* Google Antigravity (Gemini 3.8 Flash/Argon 4) y Anthropic Claude Code, bajo estricto marco de supervisión humana. Se realizaron las diapositivas con ayuda de la skill "https://github.com/nugrahalabib/AgentBuff-Presentation-Skills".
   - *1. Gestión & ClickUp:* Descomposición de requerimientos de seguridad en historias atómicas (US-1 a US-11), criterios de aceptación y sprints.
   - *2. Arquitectura CLI & Streaming:* Parseo de parámetros (`--auto`, `-n`) con la biblioteca estándar de Go y lectura por bloques mediante `io.Copy` para procesar archivos de cualquier tamaño con memoria constante `O(1)` sin riesgo de saturar la RAM.
   - *3. Criptografía Nativa:* Co-diseño de AES-256-GCM, derivación segura de llaves, canonización RFC 8785 y desacoplamiento para resolver la circularidad del hash.
 - **Gobernanza, Auditoría y Responsabilidad Ética:**
   - *Code Review Manual en PRs:* Revisión por pares obligatoria antes de integrar cambios a `main`, descartando librerías externas y blindando contra canales laterales con `subtle.ConstantTimeCompare`.
-  - *Verificación Empírica & Tests:* Suite exhaustiva de table-driven tests (concurrencia con `-race`, bit-flipping, corrupción de tags GMAC y permisos POSIX `0600`).
+  - *Verificación Empírica & Tests:* Suite exhaustiva de table-driven tests (concurrencia con `-race`, bit-flipping, corrupción de tags GMAC y permisos POSIX `0600 (lectura y escritura únicamente al usuario propietario del archivo)`).
   - *Autoría Total & Comprensión:* El equipo comprende exhaustivamente la arquitectura interna, el flujo de memoria y la criptografía aplicada, asumiendo total autoría ética y técnica del software entregado.
 - **Comando de Validación:**
   ```bash

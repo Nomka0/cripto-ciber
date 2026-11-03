@@ -58,7 +58,7 @@ flowchart LR
 * **En pantalla:** `Slide 1`
 * **Guion Jose Antonio Castelblanco:**
   > *"Cordial saludo, profesor y compañeros. Somos el equipo de trabajo conformado por Jose Antonio Castelblanco, Braulio Robledo, Steven Nieves y Juan José Bolaños. Presentamos la sustentación del Taller 2 de Criptografía: Protección Criptográfica de Logs Estructurados en Reposo.*  
-  > *Nuestra solución fue desarrollada en Go 1.22+ bajo la política de Zero CGO, empleando exclusivamente la biblioteca estándar para todas las primitivas criptográficas y de sistema."*
+  > *Nuestra solución fue desarrollada en Go, empleando exclusivamente la biblioteca estándar para todas las primitivas criptográficas y de sistema."*
 
 #### [00:30 - 01:15] Diapositiva 2: Vector de Amenaza en Reposo y Permisos POSIX
 * **Acción:** Pasar a `Slide 2`.
@@ -90,22 +90,22 @@ flowchart LR
 * **Acción:** Pasar a `Slide 5`.
 * **En pantalla:** `Slide 5`
 * **Guion Braulio Robledo:**
-  > *"El Paso 3 presentaba un reto matemático: la paradoja de autorreferencia. Si intentamos calcular el hash de un registro que contiene dentro de sí mismo el campo del hash, la fórmula $H(E \cup \{h\}) \neq h$ demuestra que inyectar el digest altera los bytes del objeto, invalidando el cálculo en un bucle infinito.*  
-  > *Nuestra solución arquitectónica fue desacoplar el evento en dos capas: el contenedor exterior y el sub-objeto inmutable `payload`. El hash SHA-256 se calcula exclusivamente sobre los bytes del `payload`. Para que este cálculo sea determinista en cualquier plataforma, implementamos el estándar **RFC 8785 (JSON Canonicalization Scheme)**, que fija un ordenamiento lexicográfico estricto de las claves y normaliza números y espacios. Luego, el digest se inyecta en `payload_hash` en el contenedor exterior, dejando el payload 100% intacto."*
+  > *"El Paso 3 presentaba un reto matemático: la paradoja de autorreferencia. Si intentamos calcular el hash de un registro que contiene dentro de sí mismo el campo del hash, la fórmula en pantalla ($H(E \cup \{h\}) \neq h$)  demuestra que **modificar el registro para incluir su propio hash altera los bytes que se intentan verificar, cayendo en una dependencia circular que no se puede resolver**.*  
+  > *Nuestra solución arquitectónica fue desacoplar el evento en dos capas: el contenedor exterior y el sub-objeto inmutable `payload`. El hash SHA-256 se calcula exclusivamente sobre los bytes del `payload`. Para que este cálculo sea determinista en cualquier plataforma, implementamos el estándar **RFC 8785 (JSON Canonicalization Scheme)**, que fija un ordenamiento  estricto de las claves y normaliza números y espacios. Luego, el digest se inyecta en `payload_hash` en el contenedor exterior, dejando el payload 100% intacto."*
 
 #### [03:45 - 04:20] Diapositiva 6: SHA-256 Nativo y Streaming O(1)
 * **Acción:** Pasar a `Slide 6`.
 * **En pantalla:** `Slide 6`
 * **Guion Braulio Robledo:**
   > *"Para todos los resúmenes usamos SHA-256 bajo el estándar NIST FIPS 180-4 mediante `crypto/sha256`. Ofrece una resistencia de 2¹²⁸ operaciones contra colisiones —haciendo imposible encontrar dos archivos distintos con igual hash— y 2²⁵⁶ contra preimagen.*  
-  > *Para los hashes globales de archivo (Pasos 5, 7 y 9), no precargamos el archivo en memoria. Implementamos procesamiento por bloques continuos con `io.Copy` en un buffer fijo de 32 KB. Esto garantiza una complejidad espacial constante O(1), blindando al sistema contra ataques de denegación de servicio por memoria y evitando que el OOM Killer del sistema operativo dé de baja el proceso ante archivos gigantes."*
+  > *Para los hashes globales de archivo (Pasos 5, 7 y 9), no precargamos el archivo en memoria. Implementamos procesamiento por bloques continuos con `io.Copy` en un buffer fijo de 32 KB. Esto garantiza una complejidad espacial constante O(1) (se dice "O de 1"), blindando al sistema contra ataques de denegación de servicio por memoria y evitando que el OOM Killer (Out-Of-Memory Killer, o «asesino de falta de memoria») del sistema operativo dé de baja el proceso ante archivos gigantes."*
 
 #### [04:20 - 05:00] Diapositiva 10: Auditoría Forense Dual y Tiempo Constante (Paso 10)
 * **Acción:** Pasar a `Slide 10`.
 * **En pantalla:** `Slide 10`
 * **Guion Braulio Robledo:**
-  > *"En el Paso 10 ejecutamos una auditoría pericial dual: a nivel macro comparamos los hashes globales del log original contra el descifrado bit a bit; y a nivel micro recalculamos el hash individual de cada payload para aislar exactamente cualquier registro manipulado.*  
-  > *Críticamente, para mitigar ataques de canal lateral o Timing Attacks, no usamos el operador estándar `==` de Go —que retorna prematuramente en el primer byte desigual fugando microsegundos explotables—. Implementamos `crypto/subtle.ConstantTimeCompare`, que evalúa la totalidad de los bytes en un tiempo estrictamente invariante. Doy paso a Steven para la capa de cifrado y secretos."*
+  > *"En el Paso 10 ejecutamos una auditoría: a nivel macro comparamos los hashes globales del log original contra el descifrado bit a bit; y a nivel micro recalculamos el hash individual de cada payload para aislar exactamente cualquier registro manipulado.*  
+  > *Críticamente, para mitigar ataques de canal lateral o Timing Attacks, no usamos el operador estándar `==` de Go —que retorna prematuramente en el primer byte desigual fugando microsegundos explotables—. Implementamos `crypto/subtle.ConstantTimeCompare` (implementado en `cripto-ciber/internal/audit/comparator.go` en la línea 27 para los hashes globales, y en `cripto-ciber/internal/audit/record_verifier.go` en la línea 94 para cada registro), el cual evalúa la totalidad de los bytes en un tiempo estrictamente invariante. Doy paso a Steven para la capa de cifrado y secretos."*
 
 ---
 
@@ -117,14 +117,14 @@ flowchart LR
 * **Acción:** Pasar a `Slide 7`.
 * **En pantalla:** `Slide 7`
 * **Guion Steven Nieves:**
-  > *"Gracias, Braulio. Para garantizar confidencialidad e integridad simultánea en el almacenamiento en reposo (Paso 6), implementamos AES-256-GCM bajo la directriz NIST SP 800-38D. GCM es un modo AEAD (Authenticated Encryption with Associated Data) que cifra en bloque simétrico y genera en paralelo un Tag GMAC de autenticación de 128 bits.*  
-  > *Cumpliendo NIST SP 800-57, generamos una llave de 256 bits y un Nonce fresco de 96 bits usando el generador criptográfico seguro CSPRNG `crypto/rand`, alimentado por la llamada al sistema `getrandom(2)`. Es una regla absoluta no reutilizar jamás el par llave-nonce. Además, aplicamos separación física de privilegios: el log cifrado `academic_log.enc` y los secretos en `crypto_metadata.json` se guardan en archivos desacoplados con permisos `0600`."*
+  > *"Gracias, Braulio. Para garantizar confidencialidad e integridad simultánea en el almacenamiento en reposo (Paso 6), implementamos AES-256-GCM (método de cifrado simétrico que combina el estándar AES con una clave de 256 bits y el modo de operación Galois/Counter Mode (GCM). el cual No solo oculta los datos (confidencialidad), sino que también genera una etiqueta de autenticación para verificar que nadie ha alterado o manipulado el mensaje (integridad).) bajo la directriz NIST SP 800-38D. GCM es un modo AEAD (Authenticated Encryption with Associated Data) que cifra en bloque simétrico y genera en paralelo un Tag GMAC de autenticación de 128 bits.*  
+  > *Cumpliendo NIST SP 800-57, generamos una llave de 256 bits y un número pseudoaleatorio fresco de 96 bits usando el generador criptográfico seguro CSPRNG `crypto/rand`, alimentado por la llamada al sistema `getrandom(2)`. Además, aplicamos separación física de privilegios: el log cifrado `academic_log.enc` y los secretos en `crypto_metadata.json` se guardan en archivos desacoplados con permisos `0600` (solo el usuario propietario tiene acceso de lectura y escritura)."*
 
 #### [05:50 - 06:30] Diapositiva 8: Diagrama Estructural del Sistema
 * **Acción:** Pasar a `Slide 8`.
 * **En pantalla:** `Slide 8`
 * **Guion Steven Nieves:**
-  > *"Nuestra arquitectura sigue el patrón Clean Architecture desacoplada en cuatro paquetes dentro de `internal/`: el paquete `domain` define las estructuras inmutables e interfaces; `generator` implementa los catálogos y notas sintéticas; `crypto` contiene los adaptadores nativos de SHA-256 y AES-GCM; y `storage` gestiona la persistencia segura y permisos POSIX. La CLI y el orquestador interactúan exclusivamente a través de interfaces sin dependencias acopladas."*
+  > *"Nuestra arquitectura sigue el patrón Clean Architecture desacoplada en cuatro paquetes dentro de `internal/`: el paquete `domain` define las estructuras inmutables e interfaces; `generator` implementa los catálogos y notas sintéticas; `crypto` contiene los adaptadores nativos de SHA-256 y AES-GCM (Advanced Encryption Standard in Galois/Counter Mode. modo de operación para cifradores por bloques simétricos que ofrece cifrado autenticado con datos asociados); y `storage` gestiona la persistencia segura y permisos POSIX. La CLI y el orquestador interactúan exclusivamente a través de interfaces sin dependencias acopladas."*
 
 #### [06:30 - 07:15] Diapositiva 9: Comportamiento Secuencial del Pipeline
 * **Acción:** Pasar a `Slide 9`.
@@ -144,7 +144,7 @@ flowchart LR
 #### [07:15 - 08:30] DEMOSTRACIÓN 1 EN VIVO: Flujo Completo de la CLI
 * **En pantalla:** **Ventana de Terminal (Git Bash)** en primer plano con tamaño de letra 18px.
 * **Juan José Bolaños comparte pantalla de terminal y dice:**
-  > *"Gracias, Steven. Me encuentro en Git Bash en la raíz del repositorio. Procedo a limpiar el directorio de salida y ejecutar el pipeline completo en modo automatizado para 25 eventos:"*
+  > *"Gracias, Steven. Me encuentro en la raíz del repositorio. Procedo a limpiar el directorio de salida y ejecutar el pipeline completo en modo automatizado para 25 eventos:"*
 
 * **Comando que Juan José Bolaños ejecuta en la terminal:**
   ```bash
@@ -196,7 +196,7 @@ flowchart LR
 * **Acción:** **VOLVER A COMPARTIR LA PRESENTACIÓN DE DIAPOSITIVAS** en pantalla completa.
 * **En pantalla:** `Slide 13`
 * **Guion Juan José Bolaños:**
-  > *"En estricto cumplimiento de las directrices académicas de la Universidad del Valle y los principios de integridad profesional, declaramos de forma transparente que contamos con la asistencia técnica de Google Antigravity (Gemini 3.8 Flash) y Anthropic Claude Code.*  
+  > *"En estricto cumplimiento de las directrices académicas de la Universidad del Valle y los principios de integridad profesional, declaramos de forma transparente que contamos con la asistencia técnica de Google Antigravity (Gemini 3.8 Flash/Argon 4) y Anthropic Claude Code.*  
   > *La asistencia se focalizó en tres áreas metodológicas: primero, la descomposición ágil de requerimientos en historias atómicas y sprints en ClickUp; segundo, el apoyo en la arquitectura CLI en Go con parseo estándar de banderas y lectura por bloques mediante `io.Copy` con complejidad O(1) en RAM; y tercero, el co-diseño de las primitivas AES-256-GCM y canonización RFC 8785.*  
   > *Todo el código pasó por revisión manual por pares en Pull Requests, asegurando cero dependencias externas (Zero CGO), tipado fuerte y suite de pruebas de bordes y concurrencia con `-race`. El equipo comprende integralmente cada línea, asumiendo el 100% de la autoría ética y técnica del proyecto."*
 
@@ -207,7 +207,7 @@ flowchart LR
   > *"Como lecciones aprendidas de este taller, confirmamos que la defensa en profundidad en datos en reposo requiere la combinación simétrica de confidencialidad e integridad (AEAD) junto a un hashing granular de payload; que el streaming O(1) previene vulnerabilidades de denegación de servicio; y que la higiene criptográfica mediante `subtle.ConstantTimeCompare` es indispensable frente a canales laterales.*  
   
 * **[Cierre **
-  > *"Agradecemos su atención y quedamos a disposición para las preguntas del evaluador. Muchas gracias."*
+  > *"Agradecemos su atención. Muchas gracias."*
 
 ---
 

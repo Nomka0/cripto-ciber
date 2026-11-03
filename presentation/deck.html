@@ -589,7 +589,7 @@ $ sed -i 's/"grade": 4.5/"grade": 5.0/' \
                 <li><strong>Blindaje AES-256-GCM:</strong> Cero datos en claro almacenados en reposo.</li>
                 <li><strong>Integridad de Doble Nivel:</strong> Detección macro (archivo) y micro (registro).</li>
                 <li><strong>Carpeta 0700:</strong> <code>drwx------</code> (Directorio: lectura, escritura y acceso solo dueño).</li>
-                <li><strong>Archivos 0600:</strong> <code>-rw-------</code> (Lectura y escritura solo dueño; cero resto).</li>
+                <li><strong>Archivos 0600:</strong> <code>-rw-------</code> (lectura y escritura únicamente al usuario propietario del archivo).</li>
               </ul>
             </div>
             <div>
@@ -671,7 +671,7 @@ PASS: TestConstantTimeCompare_TimingInvariant (0.00s)</code></pre>
               <div style="background: var(--ink); color: var(--paper); padding: 12px; margin-top: 8px;">
                 <div class="card-h3" style="font-size: 14px; color: var(--accent-lemon);">1. MÍNIMO PRIVILEGIO (OS)</div>
                 <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
-                  Directorio <code>output/</code> con permisos <code>0700</code> y secretos en <code>0600</code>.
+                  Directorio <code>output/</code> con permisos <code>0700</code> y secretos en <code>0600 (lectura y escritura únicamente al usuario propietario del archivo)</code>.
                 </div>
               </div>
 
@@ -975,7 +975,7 @@ output/academic_log.enc: OK</code></pre>
                 <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
                   <div class="card-h3" style="font-size: 14px;">PERMISOS POSIX 0600 (-rw-------)</div>
                   <div class="body-sm" style="font-size: 11.5px; margin-top: 3px;">
-                    Lectura/escritura (4+2) solo dueño; sin acceso grupo y otros (0).
+                    0600 (lectura y escritura únicamente al usuario propietario del archivo).
                   </div>
                 </div>
               </div>
@@ -1293,7 +1293,8 @@ $ go run ./cmd/cli  # Opción 6: Auditoría
               <div class="label">METODOLOGÍA Y ÁREAS DE ASISTENCIA</div>
               <div class="subtitle">PLANIFICACIÓN, MODELADO Y CÓDIGO</div>
               <div class="body-sm" style="margin-bottom: 8px;">
-                <strong>Herramientas:</strong> Google Antigravity (Gemini 3.8 Flash) • Anthropic Claude Code.
+                <strong>Herramientas:</strong> Google Antigravity (Gemini 3.8 Flash/Argon 4) • Anthropic Claude Code.<br>
+                <span style="font-size: 11px;">Se realizaron las diapositivas con ayuda de la skill <a href="https://github.com/nugrahalabib/AgentBuff-Presentation-Skills" target="_blank" style="color: inherit; text-decoration: underline;">https://github.com/nugrahalabib/AgentBuff-Presentation-Skills</a></span>
               </div>
               <ul class="bullet-list" style="font-size: 13.5px; line-height: 1.45;">
                 <li><strong>1. Gestión & ClickUp:</strong> Descomposición de requerimientos de seguridad en historias atómicas (US-1 a US-11), criterios de aceptación y sprints.</li>
@@ -1310,7 +1311,7 @@ $ go run ./cmd/cli  # Opción 6: Auditoría
               <div class="subtitle">VALIDACIÓN RIGUROSA (100% HUMANA)</div>
               <ul class="bullet-list" style="margin-top: 6px; font-size: 13.5px; line-height: 1.45;">
                 <li><strong>Code Review Manual en PRs:</strong> Revisión por pares obligatoria antes de integrar cambios a <code>main</code>, descartando librerías externas y blindando contra canales laterales con <code>subtle.ConstantTimeCompare</code>.</li>
-                <li><strong>Verificación Empírica & Tests:</strong> Suite exhaustiva de table-driven tests (concurrencia con <code>-race</code>, bit-flipping, corrupción de tags GMAC y permisos POSIX <code>0600</code>).</li>
+                <li><strong>Verificación Empírica & Tests:</strong> Suite exhaustiva de table-driven tests (concurrencia con <code>-race</code>, bit-flipping, corrupción de tags GMAC y permisos POSIX <code>0600 (lectura y escritura únicamente al usuario propietario del archivo)</code>).</li>
                 <li><strong>Autoría Total & Comprensión:</strong> El equipo comprende la arquitectura interna, el flujo de memoria y la criptografía aplicada, asumiendo total autoría ética y técnica del software entregado.</li>
               </ul>
             </div>

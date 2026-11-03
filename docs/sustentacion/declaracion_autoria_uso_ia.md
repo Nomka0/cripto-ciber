@@ -13,8 +13,9 @@
 
 En estricto cumplimiento de las directrices académicas de la Universidad del Valle, los estatutos de integridad estudiantil y los principios éticos que rigen la práctica profesional de la ingeniería de sistemas y la ciberseguridad, los integrantes del equipo declaramos de manera explícita y transparente que para el diseño, desarrollo, verificación y documentación de la herramienta de línea de comandos (CLI) objeto de este taller, se contó con la asistencia de sistemas de Inteligencia Artificial Generativa:
 
-* **Google Antigravity CLI:** Entorno de asistencia técnica y pair programming impulsado por modelos avanzados de razonamiento (*Gemini 3.8 Flash*).
+* **Google Antigravity CLI:** Entorno de asistencia técnica y pair programming impulsado por modelos avanzados de razonamiento (*Gemini 3.8 Flash/Argon 4*).
 * **Anthropic Claude Code:** Herramienta de asistencia por terminal y análisis de código (*Claude 3.7 Sonnet*).
+* **AgentBuff Presentation Skills:** Se realizaron las diapositivas con ayuda de la skill [https://github.com/nugrahalabib/AgentBuff-Presentation-Skills](https://github.com/nugrahalabib/AgentBuff-Presentation-Skills).
 
 Dicha asistencia operó en todo momento bajo un marco riguroso de **supervisión humana continua**, **auditoría manual de seguridad** y **verificación empírica basada en pruebas automatizadas**. En ningún caso las herramientas de IA actuaron de manera autónoma o con delegación de criterio de ingeniería.
 
