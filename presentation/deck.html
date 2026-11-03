@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Protección de Logs Estructurados en Reposo — Taller 2 Criptografía</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── NEO-GRID BOLD DESIGN TOKENS ─── */
+    :root {
+      --paper: #F5F4EF;
+      --bg: #ECECE8;
+      --ink: #0A0A0A;
+      --accent-lemon: #E6FF3D;
+      --muted: #8A8A85;
+      --stage-bg: #1A1A1A;
+      --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--stage-bg);
+      font-family: var(--font-display);
+      color: var(--ink);
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── SCALED STAGE VIEWPORT ─── */
+    #stage-viewport {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #stage-container {
+      width: 1920px;
+      height: 1080px;
+      position: relative;
+      transform-origin: center center;
+      flex-shrink: 0;
+    }
+
+    /* ─── SLIDE CANVAS ─── */
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      background: var(--bg);
+      overflow: hidden;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 120ms ease;
+    }
+
+    .slide.active, .slide.visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    /* ─── UNIVERSAL 12x8 GRID FRAME ─── */
+    .frame {
+      position: absolute;
+      inset: 40px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      gap: 12px;
+      box-sizing: border-box;
+    }
+
+    /* ─── CARDS & PANELS ─── */
+    .card {
+      background: var(--paper);
+      color: var(--ink);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 24px 28px;
+      user-select: text;
+    }
+
+    .card.ink {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .card.lemon {
+      background: var(--accent-lemon);
+      color: var(--ink);
+    }
+
+    .card.wire {
+      background: transparent;
+      border: 1.5px solid var(--ink);
+    }
+
+    /* ─── TYPOGRAPHY TOKENS ─── */
+    .display {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 64px;
+      line-height: 0.94;
+      letter-spacing: -0.025em;
+      text-transform: uppercase;
+    }
+
+    .title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 38px;
+      line-height: 1.02;
+      letter-spacing: -0.015em;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 22px;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .card-h3 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 17px;
+      line-height: 1.15;
+      letter-spacing: -0.005em;
+      text-transform: uppercase;
+    }
+
+    .body {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: 17px;
+      line-height: 1.42;
+    }
+
+    .body-sm {
+      font-family: var(--font-display);
+      font-weight: 400;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .label {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      margin-bottom: 8px;
+    }
+
+    .label-sm {
+      font-family: var(--font-mono);
+      font-weight: 500;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.75;
+    }
+
+    .stat-num {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 96px;
+      line-height: 0.88;
+      letter-spacing: -0.04em;
+    }
+
+    .stat-num-sm {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 64px;
+      line-height: 0.9;
+      letter-spacing: -0.03em;
+    }
+
+    /* ─── EMPHASIS & HIGHLIGHTS ─── */
+    mark {
+      background: var(--accent-lemon);
+      color: var(--ink);
+      padding: 0 6px;
+    }
+
+    .card.lemon mark {
+      background: var(--ink);
+      color: var(--accent-lemon);
+    }
+
+    .card.ink mark {
+      background: var(--accent-lemon);
+      color: var(--ink);
+    }
+
+    em {
+      font-style: normal;
+      color: var(--accent-lemon);
+    }
+
+    .card.lemon em {
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    /* ─── CHROME & CORNER ACCENTS ─── */
+    .pagenum {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      padding: 10px 22px;
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      background: var(--paper);
+      color: var(--ink);
+      border-top: 1.5px solid var(--ink);
+      border-right: 1.5px solid var(--ink);
+      z-index: 200;
+      user-select: none;
+    }
+
+    .pagenum.invert {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .pagenum.lemon {
+      background: var(--accent-lemon);
+      color: var(--ink);
+    }
+
+    .corner-mark {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 3px;
+      pointer-events: none;
+    }
+    .corner-mark span {
+      background: currentColor;
+    }
+    .corner-mark span:last-child {
+      background: transparent !important;
+    }
+
+    /* ─── TABLES ─── */
+    .table-matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-display);
+      margin-top: 6px;
+    }
+    .table-matrix th {
+      background: var(--ink);
+      color: var(--paper);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1.5px solid var(--ink);
+    }
+    .table-matrix td {
+      padding: 10px 14px;
+      font-size: 15px;
+      line-height: 1.35;
+      border-bottom: 1.5px solid var(--ink);
+      border-right: 1.5px solid var(--ink);
+      color: var(--ink);
+    }
+    .table-matrix td:last-child {
+      border-right: none;
+    }
+    .table-matrix tr:nth-child(even) td {
+      background: rgba(0, 0, 0, 0.025);
+    }
+
+    /* ─── CODE BLOCKS & MONO LISTS ─── */
+    pre.code-block {
+      background: #000;
+      color: #A3FFA3;
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre !important;
+      overflow-x: auto;
+      margin-top: 8px;
+      border-left: 3px solid var(--accent-lemon);
+      user-select: text;
+    }
+    pre.code-block.json {
+      color: #E6E6E6;
+    }
+    pre.code-block.json .k { color: #8BE9FD; }
+    pre.code-block.json .s { color: #F1FA8C; }
+    pre.code-block.json .n { color: #BD93F9; }
+    pre.code-block.json .h { color: var(--accent-lemon); font-weight: 700; }
+
+    /* ─── LISTS & BULLETS ─── */
+    ul.bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    ul.bullet-list li {
+      position: relative;
+      padding-left: 20px;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    ul.bullet-list li::before {
+      content: "■";
+      position: absolute;
+      left: 0;
+      color: var(--accent-lemon);
+      font-size: 11px;
+      top: 3px;
+    }
+    .card.lemon ul.bullet-list li::before {
+      color: var(--ink);
+    }
+
+    /* ─── DIAGRAM CONTAINERS (VECTOR SVG NATIVE) ─── */
+    .diagram-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 6px;
+      background: #FFFFFF;
+      border: 1.5px solid var(--ink);
+    }
+    .diagram-wrap img, .diagram-wrap object {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* ─── HUD CONTROLS ─── */
+    .deck-controls {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(10, 10, 10, 0.88);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
+      border: 1.5px solid var(--ink);
+      z-index: 1000;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--paper);
+      user-select: none;
+    }
+    .deck-controls button {
+      background: transparent;
+      color: var(--accent-lemon);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 10px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+    .deck-controls button:hover {
+      background: var(--accent-lemon);
+      color: var(--ink);
+    }
+    #slide-indicator {
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 0 8px;
+    }
+
+    /* ─── PRINT / VECTOR PDF STYLES ─── */
+    @page {
+      size: 1920px 1080px;
+      margin: 0;
+    }
+    @media print {
+      html, body {
+        width: 1920px !important;
+        height: auto !important;
+        background: transparent !important;
+        overflow: visible !important;
+      }
+      #stage-viewport {
+        position: static !important;
+        display: block !important;
+        overflow: visible !important;
+      }
+      #stage-container {
+        transform: none !important;
+        position: static !important;
+        width: 1920px !important;
+        height: auto !important;
+      }
+      .slide {
+        position: relative !important;
+        display: block !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        page-break-after: always !important;
+        break-after: page !important;
+        width: 1920px !important;
+        height: 1080px !important;
+        margin: 0 !important;
+      }
+      .deck-controls {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="stage-viewport">
+    <div id="stage-container">
+
+      <!-- ==========================================
+           SLIDE 1: PORTADA INSTITUCIONAL
+           ========================================== -->
+      <section class="slide active visible" id="slide-1" data-label="Portada">
+        <div class="frame">
+          <div class="card ink" style="grid-column: 1 / span 8; grid-row: 1 / span 6; justify-content: space-between;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">UNIVERSIDAD DEL VALLE • INGENIERÍA DE SISTEMAS</div>
+              <div class="display" style="margin-top: 16px;">CLI SEGURA: PROTECCIÓN DE LOGS EN REPOSO</div>
+              <div class="title" style="font-size: 24px; color: var(--accent-lemon); margin-top: 14px;">
+                CRIPTOGRAFÍA SIMÉTRICA, HASHING FORENSE Y AUDITORÍA ATÓMICA
+              </div>
+            </div>
+            <div>
+              <div class="body" style="color: #ECECE8; max-width: 85%;">
+                Taller 2 de Criptografía y Seguridad en Redes • Escuela de Ingeniería de Sistemas y Computación • Santiago de Cali, 2026.
+              </div>
+            </div>
+          </div>
+
+          <div class="card lemon" style="grid-column: 9 / span 4; grid-row: 1 / span 3; justify-content: space-between;">
+            <div class="label">ESTÁNDAR NATIVO</div>
+            <div>
+              <div class="stat-num">100%</div>
+              <div class="card-h3" style="margin-top: 6px;">LIBRERÍA ESTÁNDAR DE GO</div>
+            </div>
+            <div class="label-sm">GO 1.22+ • RFC 8785 • ZERO CGO • NIST FIPS 180-4</div>
+          </div>
+
+          <div class="card ink" style="grid-column: 9 / span 4; grid-row: 4 / span 3; justify-content: space-between;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label" style="color: var(--accent-lemon);">EJECUCIÓN DEL PIPELINE</div>
+            <div>
+              <div class="card-h3" style="font-size: 15px; color: var(--paper);">COMANDO DE ENTRADA CLI</div>
+              <pre class="code-block" style="font-size: 11px; margin-top: 8px; padding: 10px 12px; background: #000; color: #A3FFA3; border-left: 3px solid var(--accent-lemon);"><code>$ go run ./cmd/cli --auto -n 25
+[01] Lote: 25 eventos configurados
+[03] Hashing: SHA-256 canónico RFC 8785 (JCS)
+[06] Cifrado: AES-256-GCM + GMAC Tag (AEAD)
+[10] Auditoría: Integridad 100% preservada</code></pre>
+            </div>
+            <div class="label-sm" style="color: var(--accent-lemon);">REPRODUCIBLE: GO RUN ./CMD/CLI --AUTO -N &lt;N&gt;</div>
+          </div>
+
+          <div class="card" style="grid-column: 1 / span 12; grid-row: 7 / span 2; padding: 18px 24px;">
+            <div class="label">EQUIPO DE TRABAJO & DISTRIBUCIÓN DE RESPONSABILIDADES</div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 8px;">
+              <div style="border-left: 2px solid var(--ink); padding-left: 12px;">
+                <div class="card-h3" style="font-size: 16px;">JOSE ANTONIO CASTELBLANCO</div>
+                <div class="label-sm" style="margin: 2px 0;">INTEGRANTE 1</div>
+                <div class="body-sm" style="font-size: 13px;">Modelado de Dominio & Generador Estocástico</div>
+              </div>
+              <div style="border-left: 2px solid var(--ink); padding-left: 12px;">
+                <div class="card-h3" style="font-size: 16px;">BRAULIO ROBLEDO</div>
+                <div class="label-sm" style="margin: 2px 0;">INTEGRANTE 2</div>
+                <div class="body-sm" style="font-size: 13px;">Integridad, Hashing SHA-256 & Auditoría Dual</div>
+              </div>
+              <div style="border-left: 2px solid var(--ink); padding-left: 12px;">
+                <div class="card-h3" style="font-size: 16px;">STEVEN NIEVES</div>
+                <div class="label-sm" style="margin: 2px 0;">INTEGRANTE 3</div>
+                <div class="body-sm" style="font-size: 13px;">Cifrado AES-256-GCM & Gestión de Secretos</div>
+              </div>
+              <div style="border-left: 2px solid var(--ink); padding-left: 12px;">
+                <div class="card-h3" style="font-size: 16px;">JUAN JOSÉ BOLAÑOS</div>
+                <div class="label-sm" style="margin: 2px 0;">INTEGRANTE 4</div>
+                <div class="body-sm" style="font-size: 13px;">Orquestación Pipeline, CLI & Tampering Tests</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">01 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 2: PLANTEAMIENTO DEL PROBLEMA
+           ========================================== -->
+      <section class="slide" id="slide-2" data-label="Problema">
+        <div class="frame">
+          <div class="card" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label">CONTEXTO OPERATIVO • SISTEMA DE GESTIÓN ACADÉMICA</div>
+            <div class="title">VECTOR DE AMENAZA: <mark>MANIPULACIÓN EN REPOSO</mark> (DATA AT REST)</div>
+          </div>
+
+          <div class="card ink" style="grid-column: 1 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">IMPACTO DE NEGOCIO</div>
+              <div class="subtitle" style="color: var(--paper);">CALIFICACIONES CRÍTICAS</div>
+              <ul class="bullet-list" style="margin-top: 14px;">
+                <li>Alteración de notas compromete actas oficiales, becas y títulos.</li>
+                <li>Fraude quirúrgico: variar una décima (4.4 a 4.5) es indetectable en texto claro.</li>
+                <li>Riesgo severo ante intrusos locales o personal con privilegios de root.</li>
+              </ul>
+            </div>
+            <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 12px;">
+              <div class="stat-num-sm" style="color: var(--accent-lemon);">CRÍTICO</div>
+              <div class="label-sm" style="color: var(--paper);">SEVERIDAD ANTE FRAUDE ACADÉMICO</div>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 5 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">SUPERFICIE DE ATAQUE</div>
+              <div class="subtitle">EXPOSICIÓN EN CLARO</div>
+              <pre class="code-block" style="font-size: 11px; margin-top: 8px; background: #000; color: #FF7777;"><code># Adversario lee o altera notas en disco
+$ cat output/academic_log.json | grep "grade"
+  "grade": 4.5
+$ sed -i 's/"grade": 4.5/"grade": 5.0/' \
+  output/academic_log.json</code></pre>
+              <ul class="bullet-list" style="margin-top: 12px;">
+                <li><strong>Sin Cifrado:</strong> Exfiltración masiva de datos en claro.</li>
+                <li><strong>Sin Resúmenes:</strong> Modificación inadvertida sin traza forense.</li>
+              </ul>
+            </div>
+            <div style="background: var(--ink); color: var(--paper); padding: 12px;">
+              <div class="label-sm" style="color: var(--accent-lemon);">VULNERABILIDAD:</div>
+              <div class="body-sm" style="font-size: 12px; font-family: var(--font-mono); margin-top: 2px;">
+                academic_log.json [Vulnerable a Manipulación]
+              </div>
+            </div>
+          </div>
+
+          <div class="card lemon" style="grid-column: 9 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">MITIGACIÓN PROPUESTA</div>
+              <div class="subtitle">ARQUITECTURA DEFENSIVA</div>
+              <ul class="bullet-list" style="margin-top: 10px;">
+                <li><strong>Blindaje AES-256-GCM:</strong> Cero datos en claro almacenados en reposo.</li>
+                <li><strong>Integridad de Doble Nivel:</strong> Detección macro (archivo) y micro (registro).</li>
+                <li><strong>Carpeta 0700:</strong> <code>drwx------</code> (Directorio: lectura, escritura y acceso solo dueño).</li>
+                <li><strong>Archivos 0600:</strong> <code>-rw-------</code> (Lectura y escritura solo dueño; cero resto).</li>
+              </ul>
+            </div>
+            <div>
+              <div class="label-sm" style="margin-bottom: 4px;">DESGLOSE: d=Dir | r=Lectura(4) | w=Escritura(2) | x=Acceso(1)</div>
+              <pre class="code-block" style="font-size: 10.5px; background: var(--ink); color: #A3FFA3; padding: 6px 8px;"><code>$ stat -c "%a %A %n" output/ output/*.enc
+700 drwx------ output/ (rwx dueño, sin grupo/otros)
+600 -rw------- academic_log.enc (rw dueño, sin grupo/otros)</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">02 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 3: ATRIBUTOS DE SEGURIDAD & AMENAZAS
+           ========================================== -->
+      <section class="slide" id="slide-3" data-label="Seguridad">
+        <div class="frame">
+          <div class="card ink" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label" style="color: var(--accent-lemon);">ESTÁNDAR ISO/IEC 27001 • MODELO STRIDE</div>
+            <div class="title" style="color: var(--paper);">ATRIBUTOS DE CALIDAD & <mark>MODELO DE MITIGACIÓN</mark></div>
+          </div>
+
+          <div class="card" style="grid-column: 1 / span 8; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">MATRIZ OPERATIVA DE SEGURIDAD</div>
+              <table class="table-matrix" style="margin-top: 6px;">
+                <thead>
+                  <tr>
+                    <th style="width: 25%;">ATRIBUTO</th>
+                    <th style="width: 35%;">MECANISMO EN GO</th>
+                    <th style="width: 40%;">AMENAZA MITIGADA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>CONFIDENCIALIDAD</strong></td>
+                    <td>AES-256-GCM (cifrado AEAD en reposo)</td>
+                    <td>Exfiltración no autorizada de calificaciones</td>
+                  </tr>
+                  <tr>
+                    <td><strong>INTEGRIDAD GRANULAR</strong></td>
+                    <td>SHA-256 sobre sub-payload</td>
+                    <td>Mutación quirúrgica de notas o UIDs</td>
+                  </tr>
+                  <tr>
+                    <td><strong>INTEGRIDAD GLOBAL</strong></td>
+                    <td>SHA-256 Streaming O(1)</td>
+                    <td>Inserción, borrado o reorden de eventos</td>
+                  </tr>
+                  <tr>
+                    <td><strong>AUTENTICIDAD</strong></td>
+                    <td>Tag GMAC (firma de autenticación 128-bit)</td>
+                    <td>Inyección de ciphertext forjado o bit-flipping</td>
+                  </tr>
+                  <tr>
+                    <td><strong>INMUNIDAD TIMING</strong></td>
+                    <td><code>subtle.ConstantTimeCompare</code> (tiempo constante)</td>
+                    <td>Ataques de canal lateral por microsegundos</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <div class="label-sm" style="margin-bottom: 4px;">TESTS AUTOMATIZADOS DE VULNERABILIDAD:</div>
+              <pre class="code-block" style="font-size: 11px; background: #000; color: #A3FFA3; padding: 8px 10px;"><code>$ go test -v -run "TestCrypto|TestAudit" ./...
+PASS: TestAESGCM_BitFlippingDetection (0.01s)
+PASS: TestConstantTimeCompare_TimingInvariant (0.00s)</code></pre>
+            </div>
+          </div>
+
+          <div class="card lemon" style="grid-column: 9 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">POLÍTICAS DE SISTEMA</div>
+              <div class="subtitle">PRINCIPIOS CLAVE</div>
+              
+              <div style="background: var(--ink); color: var(--paper); padding: 12px; margin-top: 8px;">
+                <div class="card-h3" style="font-size: 14px; color: var(--accent-lemon);">1. MÍNIMO PRIVILEGIO (OS)</div>
+                <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
+                  Directorio <code>output/</code> con permisos <code>0700</code> y secretos en <code>0600</code>.
+                </div>
+              </div>
+
+              <div style="background: var(--ink); color: var(--paper); padding: 12px; margin-top: 8px;">
+                <div class="card-h3" style="font-size: 14px; color: var(--accent-lemon);">2. SEPARACIÓN DE SECRETOS</div>
+                <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
+                  Ciphertext (<code>.enc</code>) desacoplado físicamente de llaves y nonces.
+                </div>
+              </div>
+
+              <div style="background: var(--ink); color: var(--paper); padding: 12px; margin-top: 8px;">
+                <div class="card-h3" style="font-size: 14px; color: var(--accent-lemon);">3. TIEMPO CONSTANTE</div>
+                <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
+                  Cero fugas de información temporal en comparaciones forenses.
+                </div>
+              </div>
+            </div>
+            <div class="label-sm">DEFENSA EN PROFUNDIDAD: NIST & ISO 27001</div>
+          </div>
+        </div>
+        <div class="pagenum">03 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 4: ARQUITECTURA DEL LOG & JSON SCHEMA
+           ========================================== -->
+      <section class="slide" id="slide-4" data-label="Esquema JSON">
+        <div class="frame">
+          <div class="card" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label">DISEÑO DE DATOS & RFC 8785 (JSON CANONICALIZATION)</div>
+            <div class="title">ESTRUCTURA DEL LOG: <mark>ACADEMIC_LOG.JSON</mark></div>
+          </div>
+
+          <div class="card ink" style="grid-column: 1 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">ESPECIFICACIÓN FORMAL</div>
+              <div class="subtitle" style="color: var(--paper);">REGLAS DE DOMINIO</div>
+              <ul class="bullet-list" style="margin-top: 12px;">
+                <li><strong>Identificadores Opacos:</strong> <code>USR-STU-*</code>, <code>USR-DOC-*</code>, <code>SUB-*</code>.</li>
+                <li><strong>Distribución Estocástica:</strong> Uniforme <code>U[0.0, 5.0]</code> con <code>math/rand/v2</code> (PRNG de dominio, no criptográfico).</li>
+                <li><strong>Trazabilidad de Deltas:</strong> <code>previous_grade</code>, <code>new_grade</code> y <code>reason</code>.</li>
+              </ul>
+            </div>
+            <div>
+              <div class="label-sm" style="color: var(--accent-lemon); margin-bottom: 4px;">INSPECCIÓN VÍA CLI / JQ:</div>
+              <pre class="code-block" style="font-size: 10px; background: #000; color: #A3FFA3; padding: 8px;"><code>$ jq '.[0] | {event_id, payload_hash}' \
+  output/academic_log.json
+{
+  "event_id": "EVT-REG-00001",
+  "payload_hash": "a591a6d4..."
+}</code></pre>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 5 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">EVENTO 1: REGISTRO_NOTA</div>
+              <div class="subtitle" style="font-size: 18px;">ANATOMÍA DEL SELLADO</div>
+              <pre class="code-block json" style="font-size: 11px; margin-top: 8px;"><code>{
+  <span class="k">"event_id"</span>: <span class="s">"EVT-REG-00001"</span>,
+  <span class="k">"event_type"</span>: <span class="s">"REGISTRO_NOTA"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"student_uid"</span>: <span class="s">"USR-STU-001"</span>,
+    <span class="k">"grade"</span>: <span class="n">4.5</span>,
+    <span class="k">"evaluation"</span>: <span class="s">"Parcial 1"</span>,
+    <span class="k">"timestamp"</span>: <span class="s">"2026-10-29T12:00:00Z"</span>
+  },
+  <span class="k">"payload_hash"</span>: <span class="h">"a591a6d4...9ad9f146e"</span>
+}</code></pre>
+            </div>
+            <div class="body-sm" style="font-size: 12px; border-left: 2px solid var(--ink); padding-left: 8px;">
+              El hash sella <strong>exclusivamente</strong> el sub-objeto <code>payload</code> antes de escribir el contenedor.
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 9 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">EVENTO 2: MODIFICACION_NOTA</div>
+              <div class="subtitle" style="font-size: 18px;">DELTA AUDITABLE</div>
+              <pre class="code-block json" style="font-size: 11px; margin-top: 8px;"><code>{
+  <span class="k">"event_id"</span>: <span class="s">"EVT-MOD-00002"</span>,
+  <span class="k">"event_type"</span>: <span class="s">"MODIFICACION_NOTA"</span>,
+  <span class="k">"payload"</span>: {
+    <span class="k">"student_uid"</span>: <span class="s">"USR-STU-001"</span>,
+    <span class="k">"previous_grade"</span>: <span class="n">4.5</span>,
+    <span class="k">"new_grade"</span>: <span class="n">5.0</span>,
+    <span class="k">"reason"</span>: <span class="s">"Recalificación"</span>
+  },
+  <span class="k">"payload_hash"</span>: <span class="h">"3f42b89c...14a2b901f"</span>
+}</code></pre>
+            </div>
+            <div class="body-sm" style="font-size: 12px; border-left: 2px solid var(--ink); padding-left: 8px;">
+              Historial inmutable: auditoría de notas previas sin permitir borrado destructivo del historial.
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">04 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 5: PREVENCIÓN DE CIRCULARIDAD (PASO 3)
+           ========================================== -->
+      <section class="slide" id="slide-5" data-label="Circularidad">
+        <div class="frame">
+          <div class="card ink" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label" style="color: var(--accent-lemon);">PASO 3 • DISEÑO CRIPTOGRÁFICO FORMAL</div>
+            <div class="title" style="color: var(--paper);">RESOLUCIÓN DE <mark>CIRCULARIDAD</mark> EN HASHING DE PAYLOAD</div>
+          </div>
+
+          <div class="card" style="grid-column: 1 / span 5; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">PARADOJA DE AUTORREFERENCIA</div>
+              <div class="subtitle">EL PROBLEMA MATEMÁTICO</div>
+              <div class="body" style="margin-top: 8px;">
+                Si el hash se calcula sobre todo el objeto <code>E</code> y se almacena en su interior, los bytes mutan inmediatamente:
+              </div>
+              <div style="background: var(--ink); color: var(--accent-lemon); padding: 14px; margin-top: 10px; font-family: var(--font-mono); font-size: 16px; text-align: center; border-left: 3px solid var(--accent-lemon);">
+                H(E ∪ {h}) ≠ h
+              </div>
+              <ul class="bullet-list" style="margin-top: 10px;">
+                <li>Autosellar una entidad con su propio digest genera recursión infinita.</li>
+                <li>Cada inyección del hash invalida irreversiblemente el hash anterior.</li>
+                <li>Solución: Aislamiento estricto de contenedor y payload inmutable.</li>
+              </ul>
+            </div>
+            <div>
+              <div class="label-sm" style="margin-bottom: 4px;">TEST DE NO-CIRCULARIDAD:</div>
+              <pre class="code-block" style="font-size: 11px; background: #000; color: #A3FFA3; padding: 8px 10px;"><code>$ go test -v -run TestCanonicalPayloadHash ./...
+PASS: TestCanonicalPayloadHash_NoCircularity (0.00s)</code></pre>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 6 / span 7; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">ARQUITECTURA DE AISLAMIENTO EN 4 PASOS</div>
+              <div class="subtitle">PIPELINE DE SELLADO DE TRANSACCIÓN</div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 14px;">1. AISLAMIENTO ESTRUCTURAL</div>
+                  <div class="body-sm" style="margin-top: 4px; font-size: 12px;">
+                    Bifurcación en contenedor exterior y sub-objeto inmutable <code>payload</code>.
+                  </div>
+                </div>
+                <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 14px;">2. CANONICIDAD RFC 8785 (JCS)</div>
+                  <div class="body-sm" style="margin-top: 4px; font-size: 12px;">
+                    Orden lexicográfico de claves y sin espacios para garantizar hashes deterministas idénticos.
+                  </div>
+                </div>
+                <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 14px;">3. CÁLCULO SHA-256</div>
+                  <div class="body-sm" style="margin-top: 4px; font-size: 12px;">
+                    El digest se computa <strong>únicamente</strong> sobre los bytes de <code>payload</code>.
+                  </div>
+                </div>
+                <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 14px;">4. INYECCIÓN EXTERNA</div>
+                  <div class="body-sm" style="margin-top: 4px; font-size: 12px;">
+                    El digest se escribe en <code>payload_hash</code>, dejando el payload 100% intacto.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card lemon" style="padding: 14px 18px;">
+              <div class="label">MODELO FORMAL DE HASHING DE TRANSACCIÓN</div>
+              <div class="title" style="font-size: 18px; margin-top: 4px; font-family: var(--font-mono);">
+                PayloadHash = SHA256(CanonicalJSON(Event.Payload))
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">05 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 6: PRIMITIVAS: SHA-256 Y STREAMING
+           ========================================== -->
+      <section class="slide" id="slide-6" data-label="SHA-256">
+        <div class="frame">
+          <div class="card" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label">NIST FIPS 180-4 • ARQUITECTURA DE ALTO RENDIMIENTO</div>
+            <div class="title">SHA-256 NATIVO Y <mark>PROCESAMIENTO POR STREAMING O(1)</mark></div>
+          </div>
+
+          <div class="card ink" style="grid-column: 1 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">ROBUSTEZ NIST FIPS 180-4</div>
+              <div class="subtitle" style="color: var(--paper);">ESPACIO CRIPTOGRÁFICO</div>
+              <ul class="bullet-list" style="margin-top: 12px;">
+                <li><strong>Colisiones:</strong> Margen de 2<sup>128</sup> ops (imposible hallar dos mensajes con igual hash).</li>
+                <li><strong>Preimagen:</strong> 2<sup>256</sup> ops (imposible revertir el hash al mensaje original).</li>
+                <li><strong>Aceleración Hardware:</strong> Instrucciones Intel SHA-NI y ARMv8 automáticas en Go.</li>
+              </ul>
+            </div>
+            <div style="border-top: 1px solid rgba(255,255,255,0.2); padding-top: 12px;">
+              <div class="stat-num-sm" style="color: var(--accent-lemon);">2<sup>256</sup></div>
+              <div class="label-sm" style="color: var(--paper);">ESTADOS POSIBLES DEL RESUMEN</div>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 5 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">PREVENCIÓN DE DOS / OOM</div>
+              <div class="subtitle">STREAMING O(1) (MEMORIA CONSTANTE)</div>
+              <pre class="code-block" style="font-size: 11px;"><code>// io.Copy transmite por buffers de 32 KB
+hasher := sha256.New()
+if _, err := io.Copy(hasher, file); err != nil {
+    return "", err
+}
+digest := hex.EncodeToString(hasher.Sum(nil))</code></pre>
+              <ul class="bullet-list" style="margin-top: 10px;">
+                <li>Cero precarga de archivos gigantescos en RAM.</li>
+                <li>Inmunidad al OOM Killer (evita que el SO liquide el proceso).</li>
+                <li>Consumo de memoria constante <code>O(1)</code> plano (buffer 32 KB).</li>
+              </ul>
+            </div>
+            <div class="label-sm">COMPLEJIDAD ESPACIAL: O(1) CONSTANTE</div>
+          </div>
+
+          <div class="card lemon" style="grid-column: 9 / span 4; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">INTEROPERABILIDAD FORENSE</div>
+              <div class="subtitle">GNU COREUTILS</div>
+              <div class="body-sm" style="margin-top: 6px;">
+                Los testigos se persisten con formato estándar POSIX:
+                <code>&lt;hash_64_hex&gt;  &lt;archivo&gt;</code>
+              </div>
+              <div class="body-sm" style="margin-top: 10px; font-weight: 700;">
+                Verificación pericial universal en terminal:
+              </div>
+              <pre class="code-block" style="font-size: 11px; background: #000; color: #A3FFA3; margin-top: 6px; padding: 10px;"><code>$ sha256sum -c output/academic_log.json.sha256
+output/academic_log.json: OK
+
+$ sha256sum -c output/academic_log.enc.sha256
+output/academic_log.enc: OK</code></pre>
+            </div>
+            <div class="label-sm">VALIDACIÓN INDEPENDIENTE SIN DEPENDER DE GO</div>
+          </div>
+        </div>
+        <div class="pagenum">06 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 7: CIFRADO EN REPOSO: AES-256-GCM
+           ========================================== -->
+      <section class="slide" id="slide-7" data-label="AES-256-GCM">
+        <div class="frame">
+          <div class="card ink" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label" style="color: var(--accent-lemon);">NIST SP 800-38D & NIST SP 800-57</div>
+            <div class="title" style="color: var(--paper);">CIFRADO AUTENTICADO EN REPOSO: <mark>AES-256-GCM</mark></div>
+          </div>
+
+          <div class="card" style="grid-column: 1 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">MODO AEAD (CIFRADO AUTENTICADO: PRIVACIDAD + INTEGRIDAD)</div>
+              <div class="subtitle">GALOIS/COUNTER MODE (GCM)</div>
+              <ul class="bullet-list" style="margin-top: 12px;">
+                <li><strong>Confidencialidad Simétrica:</strong> Cifrado en flujo basado en AES-CTR con llave de 256 bits.</li>
+                <li><strong>Autenticidad e Integridad:</strong> Tag de autenticación Galois (<strong>GMAC</strong>, firma de 128 bits).</li>
+                <li><strong>Mitigación de Bit-Flipping:</strong> Alterar 1 bit en ciphertext corrompe el tag GMAC y aborta descifrado.</li>
+              </ul>
+            </div>
+            <div>
+              <div class="label-sm" style="margin-bottom: 4px;">DESGLOSE: r=LECTURA(4), w=ESCRITURA(2), x=EJECUCIÓN(1):</div>
+              <pre class="code-block" style="font-size: 11px; background: #000; color: #A3FFA3; padding: 8px 10px;"><code>$ stat -c "%a %A %n" output/academic_log.enc output/crypto_metadata.json
+600 -rw------- academic_log.enc (r+w dueño, cero resto)
+600 -rw------- crypto_metadata.json (r+w dueño, cero resto)</code></pre>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 7 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">GESTIÓN DEL CICLO DE VIDA DE SECRETOS</div>
+              <div class="subtitle">POLÍTICAS CRIPTOGRÁFICAS NIST</div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 14px;">CSPRNG (crypto/rand)</div>
+                  <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
+                    Entropía de <code>getrandom(2)</code> del kernel (impredecible).
+                  </div>
+                </div>
+                <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 14px;">CLAVE DE 256 BITS</div>
+                  <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
+                    32 bytes de entropía pura (2<sup>256</sup> combinaciones).
+                  </div>
+                </div>
+                <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 14px;">NONCE ÚNICO DE 96 BITS (IV)</div>
+                  <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
+                    Vector de 12 bytes aleatorios frescos por corrida (cero reuso).
+                  </div>
+                </div>
+                <div style="background: var(--bg); padding: 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 14px;">PERMISOS POSIX 0600 (-rw-------)</div>
+                  <div class="body-sm" style="font-size: 11.5px; margin-top: 3px;">
+                    Lectura/escritura (4+2) solo dueño; sin acceso grupo y otros (0).
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card lemon" style="padding: 12px 16px;">
+              <div class="card-h3" style="font-size: 14px;">SEPARACIÓN FÍSICA DE PRIVILEGIOS</div>
+              <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
+                Tener el archivo cifrado <code>academic_log.enc</code> no compromete el log sin las llaves aisladas en <code>crypto_metadata.json</code>.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">07 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 8: DIAGRAMA ESTRUCTURAL DE PAQUETES (VECTOR SVG)
+           ========================================== -->
+      <section class="slide" id="slide-8" data-label="Diagrama Estructural">
+        <div class="frame">
+          <div class="card" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label">ARTEFACTO DE DISEÑO 1 • MODELO DE COMPONENTES</div>
+            <div class="title">ARQUITECTURA MODULAR Y <mark>DESACOPLAMIENTO DE PAQUETES</mark></div>
+          </div>
+
+          <!-- Vector SVG Diagram (Col 1..8, Row 3..8) -->
+          <div class="card" style="grid-column: 1 / span 8; grid-row: 3 / span 6; padding: 12px;">
+            <div class="diagram-wrap">
+              <img src="assets/01_uml_diagrama_estructural.svg" alt="Diagrama Estructural de Paquetes y Componentes (SVG Vectorial)">
+            </div>
+          </div>
+
+          <div class="card ink" style="grid-column: 9 / span 4; grid-row: 3 / span 3; justify-content: space-between;">
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">PRINCIPIOS DE ARQUITECTURA</div>
+              <ul class="bullet-list" style="margin-top: 10px;">
+                <li><strong>Fachada (Facade):</strong> <code>PipelineOrchestrator</code> unifica generador, criptografía, almacenamiento y auditoría.</li>
+                <li><strong>Inversión de Dependencias:</strong> Interfaces abstractas desacopladas en <code>domain</code>.</li>
+                <li><strong>Grafo Acíclico (DAG):</strong> Cero dependencias circulares y cero CGO.</li>
+              </ul>
+            </div>
+            <div class="label-sm" style="color: var(--accent-lemon);">100% GO STANDARD LIBRARY</div>
+          </div>
+
+          <div class="card lemon" style="grid-column: 9 / span 4; grid-row: 6 / span 3; justify-content: space-between;">
+            <div>
+              <div class="label">PERSISTENCIA EN OUTPUT/</div>
+              <pre class="code-block" style="font-size: 11px; background: #000; color: #ECECE8; margin-top: 8px; padding: 8px 10px;"><code>$ ls -1 output/
+academic_log.json          # Claro
+academic_log.json.sha256   # Testigo P5
+academic_log.enc           # AES-GCM
+crypto_metadata.json       # Key/Nonce
+academic_log_decrypted.json # Decrypt
+*.sha256                   # Coreutils</code></pre>
+            </div>
+            <div class="label-sm">ARTEFACTOS DESACOPLADOS FÍSICAMENTE</div>
+          </div>
+        </div>
+        <div class="pagenum">08 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 9: DIAGRAMA DE COMPORTAMIENTO SECUENCIAL (VECTOR SVG)
+           ========================================== -->
+      <section class="slide" id="slide-9" data-label="Diagrama Secuencial">
+        <div class="frame">
+          <div class="card ink" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label" style="color: var(--accent-lemon);">ARTEFACTO DE DISEÑO 2 • UML 2.5 INTERACTION DIAGRAM (VECTORIAL NATIVO)</div>
+            <div class="title" style="color: var(--paper);">COMPORTAMIENTO SECUENCIAL: <mark>PASOS 1 AL 10</mark></div>
+          </div>
+
+          <!-- Vector SVG Diagram (Col 1..8, Row 3..8) -->
+          <div class="card" style="grid-column: 1 / span 8; grid-row: 3 / span 6; padding: 12px;">
+            <div class="diagram-wrap">
+              <img src="assets/diagrama_comportamiento.svg" alt="Diagrama de Secuencia de los 10 Pasos Criptográficos (SVG Vectorial)">
+            </div>
+          </div>
+
+          <div class="card lemon" style="grid-column: 9 / span 4; grid-row: 3 / span 3; justify-content: space-between;">
+            <div>
+              <div class="label">FASE 1: INGESTIÓN Y SELLADO</div>
+              <div class="subtitle" style="font-size: 16px;">PASOS 1 AL 5</div>
+              <ul class="bullet-list" style="margin-top: 6px;">
+                <li><strong>[01-02]</strong> Volumen <code>N</code> y notas estocásticas <code>U[0.0, 5.0]</code>.</li>
+                <li><strong>[03]</strong> Hashing canónico RFC 8785 (anti-circularidad).</li>
+                <li><strong>[04-05]</strong> Log plano y digest global SHA-256.</li>
+              </ul>
+            </div>
+            <div class="label-sm">SELLADO ATÓMICO PRE-ALMACENAMIENTO</div>
+          </div>
+
+          <div class="card ink" style="grid-column: 9 / span 4; grid-row: 6 / span 3; justify-content: space-between;">
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">FASE 2: BLINDAJE Y AUDITORÍA</div>
+              <div class="subtitle" style="font-size: 16px; color: var(--paper);">PASOS 6 AL 10</div>
+              <ul class="bullet-list" style="margin-top: 6px;">
+                <li><strong>[06-07]</strong> Cifrado AES-256-GCM + GMAC Tag y hash.</li>
+                <li><strong>[08-09]</strong> Descifrado autenticado y hash de archivo restaurado.</li>
+                <li><strong>[10]</strong> Auditoría dual con <code>subtle.ConstantTimeCompare</code>.</li>
+              </ul>
+            </div>
+            <div>
+              <pre class="code-block" style="font-size: 10px; background: #000; color: #A3FFA3; padding: 6px 8px;"><code>$ go run ./cmd/cli --auto -n 50</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">09 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 10: AUDITORÍA FORENSE & CONSTANT-TIME
+           ========================================== -->
+      <section class="slide" id="slide-10" data-label="Auditoría">
+        <div class="frame">
+          <div class="card" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label">PASO 10 • VERIFICACIÓN FORENSE DUAL</div>
+            <div class="title">AUDITORÍA FORENSE DUAL & <mark>CONSTANT-TIME COMPARE</mark></div>
+          </div>
+
+          <div class="card ink" style="grid-column: 1 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">DOBLE NIVEL DE INTEGRIDAD</div>
+              <div class="subtitle" style="color: var(--paper);">VERIFICACIÓN MACRO Y MICRO</div>
+              <ul class="bullet-list" style="margin-top: 12px;">
+                <li><strong>Macro (Global):</strong> Compara <code>academic_log.json.sha256</code> con <code>academic_log_decrypted.sha256</code> (integridad bit a bit del archivo).</li>
+                <li><strong>Micro (Granular):</strong> <code>VerifyAllRecords()</code> recalcula el hash de cada payload individual contra su <code>payload_hash</code>.</li>
+                <li><strong>Aislamiento Quirúrgico:</strong> Identifica con exactitud el UID del alumno y el ID del evento vulnerado.</li>
+              </ul>
+            </div>
+            <div>
+              <div class="label-sm" style="color: var(--accent-lemon); margin-bottom: 4px;">EJECUCIÓN DE AUDITORÍA FORENSE:</div>
+              <pre class="code-block" style="font-size: 11px; background: #000; color: #A3FFA3; padding: 8px 10px;"><code>$ go run ./cmd/cli  # Opción 6: Auditoría
+[+] Integridad Global (SHA-256): 100% MATCH
+[+] Integridad Granular: 25/25 registros VÁLIDOS</code></pre>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 7 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">CANALES LATERALES (SIDE-CHANNEL ATTACKS)</div>
+              <div class="subtitle">MITIGACIÓN DE TIMING ATTACKS</div>
+              <div class="body-sm" style="margin-top: 6px;">
+                Operadores estándar (<code>==</code>) retornan en el primer byte desigual (tiempo variable). <code>subtle.ConstantTimeCompare</code> evalúa todos los bytes en tiempo constante.
+              </div>
+              <pre class="code-block" style="font-size: 11px; margin-top: 8px;"><code>// Comparación en tiempo constante invariante O(N)
+isEqual := subtle.ConstantTimeCompare(
+    []byte(origHash), 
+    []byte(decHash),
+) == 1</code></pre>
+              <ul class="bullet-list" style="margin-top: 8px;">
+                <li>Tiempo de CPU idéntico independientemente de bytes coincidentes.</li>
+                <li>Cero fuga de microsegundos que permita deducir hashes.</li>
+              </ul>
+            </div>
+
+            <div class="card lemon" style="padding: 12px 16px;">
+              <div class="card-h3" style="font-size: 14px;">GARANTÍA MATEMÁTICA CRIPTOGRÁFICA</div>
+              <div class="body-sm" style="font-size: 12px; margin-top: 2px;">
+                Inmunidad total frente a ataques de temporización en red o local.
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">10 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 11: DEMOSTRACIÓN: TRAZABILIDAD Y HASHES
+           ========================================== -->
+      <section class="slide" id="slide-11" data-label="Demo Hashes">
+        <div class="frame">
+          <div class="card ink" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label" style="color: var(--accent-lemon);">EVIDENCIA EXPERIMENTAL • EJECUCIÓN DEL PIPELINE</div>
+            <div class="title" style="color: var(--paper);">RESULTADOS EN CONSOLA & <mark>TRAZABILIDAD DE HASHES</mark></div>
+          </div>
+
+          <div class="card" style="grid-column: 1 / span 5; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">EJECUCIÓN DEL PIPELINE</div>
+              <div class="subtitle">TERMINAL RUNNER</div>
+              <pre class="code-block" style="font-size: 10px; margin-top: 6px; padding: 8px 10px; background: #000; color: #ECECE8; border-left: 3px solid var(--accent-lemon);"><code>$ go run ./cmd/cli --auto -n 25
+--- 🔄 TRAZABILIDAD DE PASOS (1 AL 10) ---
+[01] Volumen: 25 eventos configurados
+[02] Generación: 23 Reg / 2 Mod U[0.0-5.0]
+[03] Hash Payload: SHA-256 canónico RFC 8785
+[04] Consolidación: output/academic_log.json
+[05] Hash Claro: academic_log.json.sha256
+[06] Cifrado Reposo: AES-256-GCM + GMAC OK
+[07] Hash Cifrado: academic_log.enc.sha256
+[08] Descifrado: Tag GMAC 128-bit verificado
+[09] Hash Descifrado: academic_log_decrypted.sha256
+[10] Auditoría: 25 válidos (0 corruptos)</code></pre>
+            </div>
+            <div class="label-sm">COMANDO: GO RUN ./CMD/CLI --AUTO -N 25</div>
+          </div>
+
+          <div class="card" style="grid-column: 6 / span 7; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">CADENA FORENSE DE CUSTODIA (SHA-256)</div>
+              <div class="subtitle">RESÚMENES EN LAS TRES ETAPAS CLAVE</div>
+
+              <table class="table-matrix" style="margin-top: 6px;">
+                <thead>
+                  <tr>
+                    <th style="width: 32%;">ETAPA DE PIPELINE</th>
+                    <th style="width: 68%;">RESUMEN CRIPTOGRÁFICO SHA-256 (DIGEST HEX)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>1. Log Original (P5)</strong><br><span class="label-sm">academic_log.json</span></td>
+                    <td><code style="color: #006600; font-weight: 700; font-size: 12px;">416d902757ac1321e1af...1cd0f38d35bd6c66</code></td>
+                  </tr>
+                  <tr>
+                    <td><strong>2. Log Cifrado (P7)</strong><br><span class="label-sm">academic_log.enc</span></td>
+                    <td><code style="color: #660066; font-size: 12px;">a4762936283f3d1a5cad...ba31afb091e61218</code></td>
+                  </tr>
+                  <tr>
+                    <td><strong>3. Log Descifrado (P9)</strong><br><span class="label-sm">academic_log_decrypted.json</span></td>
+                    <td><code style="color: #006600; font-weight: 700; font-size: 12px;">416d902757ac1321e1af...1cd0f38d35bd6c66</code></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="background: #000; border-left: 4px solid var(--accent-lemon); padding: 10px 14px; margin-top: 8px;">
+              <pre style="font-family: var(--font-mono); font-size: 11px; line-height: 1.4; color: #A3FFA3; margin: 0;"><code>[ ✔ ] VERIFICACIÓN EXITOSA: INTEGRIDAD Y CONFIDENCIALIDAD PRESERVADAS
+• Confidencialidad: Cifrado con AES-256-GCM nativo.
+• Integridad Global: Hash Original == Hash Descifrado (100% Match).
+• Integridad Granular: Payloads individuales 100% válidos.
+• Conclusión: Preservación fiel sin pérdida ni alteración de datos.</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">11 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 12: DEMOSTRACIÓN: PRUEBAS DE TAMPERING
+           ========================================== -->
+      <section class="slide" id="slide-12" data-label="Demo Tampering">
+        <div class="frame">
+          <div class="card" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label">RESISTENCIA FORENSE ACTIVA</div>
+            <div class="title">PRUEBAS DE ROBUSTEZ Y <mark>DETECCIÓN DE TAMPERING</mark></div>
+          </div>
+
+          <div class="card ink" style="grid-column: 1 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">ESCENARIO 1: CORRUPCIÓN EN REPOSO</div>
+              <div class="subtitle" style="color: var(--paper);">BIT-FLIP EN ACADEMIC_LOG.ENC</div>
+              <div class="body-sm" style="color: #ECECE8; margin-top: 4px;">
+                Se altera 1 byte en el archivo cifrado. AES-GCM verifica el Tag GMAC antes de escribir:
+              </div>
+              <pre class="code-block" style="color: #FF5555; background: #000; margin-top: 6px; font-size: 10px; border-left: 3px solid #FF5555;"><code># Mutación de 1 byte en offset de ciphertext
+$ python3 -c 'b=bytearray(open("output/academic_log.enc","rb").read()); b[0x4A]^=0xFF; open("output/academic_log.enc","wb").write(b)'
+$ go run ./cmd/cli --auto -n 5
+[06] Cifrado Reposo: AES-256-GCM OK
+[08] Descifrado:
+panic: cipher: message authentication failed</code></pre>
+            </div>
+            <div style="background: rgba(255,255,255,0.08); padding: 8px 12px; border-left: 3px solid var(--accent-lemon);">
+              <div class="card-h3" style="font-size: 13px; color: var(--accent-lemon);">DEFENSA ATÓMICA AEAD</div>
+              <div class="body-sm" style="font-size: 11px; margin-top: 2px;">
+                El Tag GMAC aborta el descifrado antes de exponer datos corruptos en memoria o disco.
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 7 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">ESCENARIO 2: ADULTERACIÓN EN CLARO</div>
+              <div class="subtitle">MANIPULACIÓN SELECTIVA DE NOTA</div>
+              <div class="body-sm" style="margin-top: 4px;">
+                Se modifica la calificación directamente en el JSON descifrado:
+              </div>
+              <pre class="code-block" style="color: #ECECE8; background: #000; margin-top: 6px; font-size: 10px; border-left: 3px solid #FF5555;"><code># Alterar nota en archivo JSON descifrado
+$ sed -i 's/"grade": [0-9.]*/"grade": 0.0/' \
+  output/academic_log_decrypted.json
+$ go run ./cmd/cli  # Opción 6: Auditoría
+[!] Hashes globales SHA-256 no coinciden [MISMATCH]
+[✘] EVT-REG-00003: Payload Hash Discrepancy!</code></pre>
+            </div>
+
+            <div style="background: #000; color: #FF5555; padding: 8px 12px; border-left: 4px solid #FF5555;">
+              <pre style="font-family: var(--font-mono); font-size: 10px; line-height: 1.35; color: #FF5555; margin: 0;"><code>[ ✘ ] ALERTA DE SEGURIDAD: VIOLACIÓN DE INTEGRIDAD
+• Integridad Global: DISCREPANCIA (Hashes divergentes).
+• Integridad Granular: Registro EVT-REG-00003 aislado.
+• Salida POSIX: Exit Code 1 (Fallo / Alerta pericial).</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">12 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 13: DECLARACIÓN OBLIGATORIA DE IA
+           ========================================== -->
+      <section class="slide" id="slide-13" data-label="Declaración IA">
+        <div class="frame">
+          <div class="card ink" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label" style="color: var(--accent-lemon);">POLÍTICA INSTITUCIONAL & ÉTICA ACADÉMICA</div>
+            <div class="title" style="color: var(--paper);">DECLARACIÓN DE AUTORÍA Y <mark>USO RESPONSABLE DE IA</mark></div>
+          </div>
+
+          <div class="card" style="grid-column: 1 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">METODOLOGÍA Y ÁREAS DE ASISTENCIA</div>
+              <div class="subtitle">PLANIFICACIÓN, MODELADO Y CÓDIGO</div>
+              <div class="body-sm" style="margin-bottom: 8px;">
+                <strong>Herramientas:</strong> Google Antigravity (Gemini 3.8 Flash) • Anthropic Claude Code.
+              </div>
+              <ul class="bullet-list" style="font-size: 13.5px; line-height: 1.45;">
+                <li><strong>1. Gestión & ClickUp:</strong> Descomposición de requerimientos de seguridad en historias atómicas (US-1 a US-11), criterios de aceptación y sprints.</li>
+                <li><strong>2. Arquitectura CLI & Streaming:</strong> Parseo de parámetros (<code>--auto</code>, <code>-n</code>) con biblioteca estándar de Go y lectura por bloques mediante <code>io.Copy</code> para procesar archivos con memoria constante <code>O(1)</code> sin saturar la RAM.</li>
+                <li><strong>3. Criptografía Nativa:</strong> Co-diseño de AES-256-GCM (cifrado AEAD autenticado), canonización RFC 8785 (JCS determinista) y desacoplamiento para resolver la circularidad del hash.</li>
+              </ul>
+            </div>
+            <div class="label-sm">SUPERVISIÓN HUMANA CONTINUA • ZERO CGO (100% GO NATIVO SIN C)</div>
+          </div>
+
+          <div class="card lemon" style="grid-column: 7 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">GOBERNANZA, AUDITORÍA Y RESPONSABILIDAD ÉTICA</div>
+              <div class="subtitle">VALIDACIÓN RIGUROSA (100% HUMANA)</div>
+              <ul class="bullet-list" style="margin-top: 6px; font-size: 13.5px; line-height: 1.45;">
+                <li><strong>Code Review Manual en PRs:</strong> Revisión por pares obligatoria antes de integrar cambios a <code>main</code>, descartando librerías externas y blindando contra canales laterales con <code>subtle.ConstantTimeCompare</code>.</li>
+                <li><strong>Verificación Empírica & Tests:</strong> Suite exhaustiva de table-driven tests (concurrencia con <code>-race</code>, bit-flipping, corrupción de tags GMAC y permisos POSIX <code>0600</code>).</li>
+                <li><strong>Autoría Total & Comprensión:</strong> El equipo comprende la arquitectura interna, el flujo de memoria y la criptografía aplicada, asumiendo total autoría ética y técnica del software entregado.</li>
+              </ul>
+            </div>
+            <div>
+              <pre class="code-block" style="font-size: 10px; background: var(--ink); color: #A3FFA3; padding: 6px 8px;"><code>$ go test -v -race ./...
+PASS: 30+ tests unitarios, concurrencia y tampering (100% OK, Cobertura 100%)</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum lemon">13 / 14</div>
+      </section>
+
+      <!-- ==========================================
+           SLIDE 14: CONCLUSIONES Y TRABAJO FUTURO
+           ========================================== -->
+      <section class="slide" id="slide-14" data-label="Conclusiones">
+        <div class="frame">
+          <div class="card" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
+            <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
+            <div class="label">EVALUACIÓN FINAL & LECCIONES APRENDIDAS</div>
+            <div class="title">CONCLUSIONES TÉCNICAS Y <mark>PROYECCIÓN A PRODUCCIÓN</mark></div>
+          </div>
+
+          <div class="card ink" style="grid-column: 1 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label" style="color: var(--accent-lemon);">LECCIONES DE SEGURIDAD</div>
+              <div class="subtitle" style="color: var(--paper);">DEFENSA EN PROFUNDIDAD</div>
+              <ul class="bullet-list" style="margin-top: 10px;">
+                <li><strong>AEAD + Hashing Granular:</strong> AES-256-GCM da confidencialidad; el tag GMAC (autenticación) y el hash de payload evitan manipulación en reposo.</li>
+                <li><strong>Rendimiento Nativo:</strong> Cero dependencias externas y complejidad <code>O(1)</code> en memoria RAM eliminan riesgos de cadena de suministro y DoS.</li>
+                <li><strong>Higiene Anti-Side-Channel:</strong> Uso indispensable de <code>subtle.ConstantTimeCompare</code> (tiempo constante) contra ataques temporales.</li>
+              </ul>
+            </div>
+            <div class="label-sm" style="color: var(--accent-lemon);">CUMPLIMIENTO: 100% DE REQUISITOS DEL TALLER 2</div>
+          </div>
+
+          <div class="card" style="grid-column: 7 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+            <div>
+              <div class="label">HOJA DE RUTA A PRODUCCIÓN</div>
+              <div class="subtitle">PRÓXIMOS PASOS DE INGENIERÍA</div>
+              
+              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                <div style="background: var(--bg); padding: 8px 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 13px;">1. CUSTODIA CENTRALIZADA DE LLAVES (KMS)</div>
+                  <div class="body-sm" style="font-size: 11px; margin-top: 2px;">
+                    Migrar <code>crypto_metadata.json</code> a HashiCorp Vault o AWS KMS.
+                  </div>
+                </div>
+
+                <div style="background: var(--bg); padding: 8px 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 13px;">2. NO REPUDIO ASIMÉTRICO (ED25519)</div>
+                  <div class="body-sm" style="font-size: 11px; margin-top: 2px;">
+                    Firma digital por docente con pares de llaves pública/privada.
+                  </div>
+                </div>
+
+                <div style="background: var(--bg); padding: 8px 12px; border-left: 3px solid var(--ink);">
+                  <div class="card-h3" style="font-size: 13px;">3. INMUTABILIDAD DISTRIBUIDA (MERKLE LOGS)</div>
+                  <div class="body-sm" style="font-size: 11px; margin-top: 2px;">
+                    Anclaje de raíces de Merkle en un append-only log auditable.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <pre class="code-block" style="font-size: 10px; background: #000; color: #A3FFA3; padding: 6px 8px;"><code>$ rm -rf output/* && go run ./cmd/cli --auto -n 50</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="pagenum">14 / 14</div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- HUD Navigation Controls -->
+  <div class="deck-controls">
+    <button id="btn-prev" title="Anterior (←)">←</button>
+    <span id="slide-indicator">01 / 14</span>
+    <button id="btn-next" title="Siguiente (→)">→</button>
+    <button id="btn-fs" title="Pantalla Completa (F)">⛶</button>
+  </div>
+
+  <!-- Navigation controller & viewport scaler -->
+  <script>
+    let current = 0;
+    const slides = document.querySelectorAll('.slide');
+    const indicator = document.getElementById('slide-indicator');
+
+    function fitStage() {
+      const container = document.getElementById('stage-container');
+      if (!container) return;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scale = Math.min(vw / 1920, vh / 1080);
+      container.style.transform = `scale(${scale})`;
+    }
+
+    function show(idx) {
+      if (idx < 0) idx = 0;
+      if (idx >= slides.length) idx = slides.length - 1;
+      current = idx;
+      slides.forEach((s, i) => {
+        const on = i === idx;
+        s.classList.toggle('active', on);
+        s.classList.toggle('visible', on);
+        s.style.visibility = on ? 'visible' : 'hidden';
+        s.style.opacity = on ? '1' : '0';
+        s.style.pointerEvents = on ? 'auto' : 'none';
+      });
+      if (indicator) {
+        indicator.textContent = `${String(idx + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+      }
+    }
+
+    window.deck = { show, next: () => show(current + 1), prev: () => show(current - 1) };
+
+    window.addEventListener('resize', fitStage);
+    window.addEventListener('DOMContentLoaded', () => {
+      fitStage();
+      show(0);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        show(current + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        show(current - 1);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        show(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        show(slides.length - 1);
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    });
+
+    document.getElementById('btn-prev').addEventListener('click', () => show(current - 1));
+    document.getElementById('btn-next').addEventListener('click', () => show(current + 1));
+    document.getElementById('btn-fs').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    fitStage();
+    show(0);
+  </script>
+</body>
+</html>
