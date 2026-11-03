@@ -588,7 +588,7 @@ $ sed -i 's/"grade": 4.5/"grade": 5.0/' \
               <ul class="bullet-list" style="margin-top: 10px;">
                 <li><strong>Blindaje AES-256-GCM:</strong> Cero datos en claro almacenados en reposo.</li>
                 <li><strong>Integridad de Doble Nivel:</strong> Detección macro (archivo) y micro (registro).</li>
-                <li><strong>Carpeta 0700:</strong> <code>drwx------</code> (Directorio: lectura, escritura y acceso solo dueño).</li>
+                <li><strong>Carpeta 0700:</strong> <code>drwx------</code> (lectura, escritura y acceso únicamente al usuario propietario del directorio).</li>
                 <li><strong>Archivos 0600:</strong> <code>-rw-------</code> (lectura y escritura únicamente al usuario propietario del archivo).</li>
               </ul>
             </div>
@@ -671,7 +671,7 @@ PASS: TestConstantTimeCompare_TimingInvariant (0.00s)</code></pre>
               <div style="background: var(--ink); color: var(--paper); padding: 12px; margin-top: 8px;">
                 <div class="card-h3" style="font-size: 14px; color: var(--accent-lemon);">1. MÍNIMO PRIVILEGIO (OS)</div>
                 <div class="body-sm" style="font-size: 12px; margin-top: 3px;">
-                  Directorio <code>output/</code> con permisos <code>0700</code> y secretos en <code>0600 (lectura y escritura únicamente al usuario propietario del archivo)</code>.
+                  Directorio <code>output/</code> con permisos <code>0700 (lectura, escritura y acceso únicamente al usuario propietario del directorio)</code> y secretos en <code>0600 (lectura y escritura únicamente al usuario propietario del archivo)</code>.
                 </div>
               </div>
 
@@ -1325,59 +1325,31 @@ PASS: 30+ tests unitarios, concurrencia y tampering (100% OK, Cobertura 100%)</c
       </section>
 
       <!-- ==========================================
-           SLIDE 14: CONCLUSIONES Y TRABAJO FUTURO
+           SLIDE 14: CONCLUSIONES Y LECCIONES DE SEGURIDAD
            ========================================== -->
       <section class="slide" id="slide-14" data-label="Conclusiones">
         <div class="frame">
           <div class="card" style="grid-column: 1 / span 12; grid-row: 1 / span 2; justify-content: center;">
             <div class="corner-mark"><span></span><span></span><span></span><span></span></div>
             <div class="label">EVALUACIÓN FINAL & LECCIONES APRENDIDAS</div>
-            <div class="title">CONCLUSIONES TÉCNICAS Y <mark>PROYECCIÓN A PRODUCCIÓN</mark></div>
+            <div class="title">CONCLUSIONES TÉCNICAS Y <mark>DEFENSA EN PROFUNDIDAD</mark></div>
           </div>
 
-          <div class="card ink" style="grid-column: 1 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
+          <div class="card ink" style="grid-column: 1 / span 12; grid-row: 3 / span 6; justify-content: space-between;">
             <div>
-              <div class="label" style="color: var(--accent-lemon);">LECCIONES DE SEGURIDAD</div>
-              <div class="subtitle" style="color: var(--paper);">DEFENSA EN PROFUNDIDAD</div>
-              <ul class="bullet-list" style="margin-top: 10px;">
-                <li><strong>AEAD + Hashing Granular:</strong> AES-256-GCM da confidencialidad; el tag GMAC (autenticación) y el hash de payload evitan manipulación en reposo.</li>
-                <li><strong>Rendimiento Nativo:</strong> Cero dependencias externas y complejidad <code>O(1)</code> en memoria RAM eliminan riesgos de cadena de suministro y DoS.</li>
-                <li><strong>Higiene Anti-Side-Channel:</strong> Uso indispensable de <code>subtle.ConstantTimeCompare</code> (tiempo constante) contra ataques temporales.</li>
+              <div class="label" style="color: var(--accent-lemon);">BALANCE DE INGENIERÍA & SEGURIDAD INTEGRAL</div>
+              <div class="subtitle" style="color: var(--paper); font-size: 20px;">CONFIDENCIALIDAD, INTEGRIDAD Y CERO DEPENDENCIAS EXTERNAS</div>
+              <ul class="bullet-list" style="margin-top: 18px; font-size: 15px; line-height: 1.55;">
+                <li><strong>Cifrado Simétrico AEAD (AES-256-GCM):</strong> Cero datos en claro almacenados en reposo. El modo Galois/Counter Mode garantiza confidencialidad e integridad simultánea mediante un tag de autenticación GMAC de 128 bits que aborta atómicamente ante cualquier manipulación o bit-flipping.</li>
+                <li><strong>Hashing Forense Granular & Global:</strong> Mitigación de la circularidad mediante desacoplamiento del sub-objeto inmutable <code>payload</code> canonizado bajo RFC 8785 (JCS determinista), combinado con resúmenes SHA-256 de archivo completo para auditoría pericial macro y micro.</li>
+                <li><strong>Procesamiento por Streaming O(1):</strong> Procesamiento continuo por bloques mediante <code>io.Copy</code> con buffer fijo de 32 KB sin precargar archivos a memoria RAM, eliminando vulnerabilidades de Denegación de Servicio (DoS) y blindando el proceso ante el OOM Killer del sistema operativo.</li>
+                <li><strong>Aislamiento de Privilegios POSIX:</strong> Directorio <code>output/</code> con permisos <code>0700</code> (lectura, escritura y acceso únicamente al usuario propietario del directorio) y secretos en <code>0600</code> (lectura y escritura únicamente al usuario propietario del archivo).</li>
+                <li><strong>Higiene Anti-Canal Lateral:</strong> Sustitución estricta de comparadores estándar por <code>subtle.ConstantTimeCompare</code> para comparaciones en tiempo invariante, neutralizando ataques de temporización (Timing Attacks).</li>
               </ul>
             </div>
-            <div class="label-sm" style="color: var(--accent-lemon);">CUMPLIMIENTO: 100% DE REQUISITOS DEL TALLER 2</div>
-          </div>
-
-          <div class="card" style="grid-column: 7 / span 6; grid-row: 3 / span 6; justify-content: space-between;">
-            <div>
-              <div class="label">HOJA DE RUTA A PRODUCCIÓN</div>
-              <div class="subtitle">PRÓXIMOS PASOS DE INGENIERÍA</div>
-              
-              <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-                <div style="background: var(--bg); padding: 8px 12px; border-left: 3px solid var(--ink);">
-                  <div class="card-h3" style="font-size: 13px;">1. CUSTODIA CENTRALIZADA DE LLAVES (KMS)</div>
-                  <div class="body-sm" style="font-size: 11px; margin-top: 2px;">
-                    Migrar <code>crypto_metadata.json</code> a HashiCorp Vault o AWS KMS.
-                  </div>
-                </div>
-
-                <div style="background: var(--bg); padding: 8px 12px; border-left: 3px solid var(--ink);">
-                  <div class="card-h3" style="font-size: 13px;">2. NO REPUDIO ASIMÉTRICO (ED25519)</div>
-                  <div class="body-sm" style="font-size: 11px; margin-top: 2px;">
-                    Firma digital por docente con pares de llaves pública/privada.
-                  </div>
-                </div>
-
-                <div style="background: var(--bg); padding: 8px 12px; border-left: 3px solid var(--ink);">
-                  <div class="card-h3" style="font-size: 13px;">3. INMUTABILIDAD DISTRIBUIDA (MERKLE LOGS)</div>
-                  <div class="body-sm" style="font-size: 11px; margin-top: 2px;">
-                    Anclaje de raíces de Merkle en un append-only log auditable.
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div>
-              <pre class="code-block" style="font-size: 10px; background: #000; color: #A3FFA3; padding: 6px 8px;"><code>$ rm -rf output/* && go run ./cmd/cli --auto -n 50</code></pre>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px;">
+              <div class="label-sm" style="color: var(--accent-lemon); font-size: 12.5px;">CUMPLIMIENTO: 100% DE REQUISITOS DEL TALLER 2 • ZERO CGO (100% GO NATIVO) • NIST & RFC 8785</div>
+              <pre class="code-block" style="font-size: 11px; background: #000; color: #A3FFA3; padding: 6px 14px; margin: 0;"><code>$ go test -v -race ./...  # 30+ tests PASS (100% OK)</code></pre>
             </div>
           </div>
         </div>

@@ -50,8 +50,8 @@
   - **Sensibilidad:** Alteración de notas altera actas oficiales, becas y títulos.
   - **Fraude Quirúrgico:** Variar una décima (4.4 a 4.5) es indetectable en texto claro sin firmas.
   - **Superficie de Exposición:** Adversarios internos (DBAs/root) o atacantes con acceso al host.
-  - **Carpeta 0700:** `drwx------` (`d`=Directorio; `rwx`=4+2+1 lectura, escritura y acceso exclusivo dueño).
-  - **Secretos 0600:** `-rw-------` (`-`=Archivo; `rw-`=4+2 lectura y escritura solo dueño; `---` cero resto).
+  - **Carpeta 0700:** `drwx------` (0700: lectura, escritura y acceso únicamente al usuario propietario del directorio).
+  - **Secretos 0600:** `-rw-------` (0600: lectura y escritura únicamente al usuario propietario del archivo).
 - **Comando de Exposición en Claro vs Mitigación:**
   ```bash
   # Ataque en texto claro
@@ -144,7 +144,7 @@
   - Mitigación de bit-flipping: Mutar 1 solo bit aborta el descifrado (`cipher: message authentication failed`).
 - **Gestión de Secretos (NIST SP 800-57):**
   - Clave 256 bits + Nonce 96 bits vía CSPRNG `crypto/rand` (`getrandom(2)`).
-  - Desacoplamiento físico: `academic_log.enc` separado de `crypto_metadata.json` (permisos `0600`).
+  - Desacoplamiento físico: `academic_log.enc` separado de `crypto_metadata.json` (permisos `0600 (lectura y escritura únicamente al usuario propietario del archivo)`).
 - **Comando de Verificación (Permisos Octales y Modo Simbólico):**
   ```bash
   $ stat -c "%a %A %n" output/academic_log.enc output/crypto_metadata.json
@@ -295,17 +295,14 @@ sequenceDiagram
 
 ---
 
-### Slide 14: Conclusiones Técnicas y Proyección a Producción
-- **Título:** Conclusiones Técnicas y Proyección a Producción
+### Slide 14: Conclusiones Técnicas y Defensa en Profundidad
+- **Título:** Conclusiones Técnicas y Defensa en Profundidad
 - **Lecciones de Seguridad:**
   - *Defensa en Profundidad:* AEAD (AES-256-GCM) + Hashing granular previene manipulación en reposo.
   - *Rendimiento Nativo:* Cero dependencias externas y complejidad `O(1)` en memoria RAM eliminan riesgos de cadena de suministro y DoS.
   - *Higiene Criptográfica:* `subtle.ConstantTimeCompare` es mandatorio frente a canales laterales.
-- **Roadmap a Producción:**
-  - 1. Custodia KMS (HashiCorp Vault / AWS KMS).
-  - 2. No Repudio Asimétrico con pares de llaves Ed25519.
-  - 3. Inmutabilidad distribuida con árboles de Merkle append-only.
-- **Comando de Ciclo Completo:**
+  - *Aislamiento POSIX:* Directorio `0700` y secretos `0600` blindan los activos en el sistema operativo.
+- **Comando de Validación:**
   ```bash
-  $ rm -rf output/* && go run ./cmd/cli --auto -n 50
+  $ go test -v -race ./...
   ```
