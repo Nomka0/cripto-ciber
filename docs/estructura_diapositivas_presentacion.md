@@ -157,6 +157,9 @@
 
 ### Slide 8: Diagrama de Diseño 1: Arquitectura Estructural
 - **Título:** Diagrama de Diseño 1: Arquitectura y Desacoplamiento de Paquetes
+- **Artefactos del Entregable:**
+  - Código fuente Mermaid: `docs/diagrama_estructural.mmd`
+  - Renderizado HD: `docs/diagrama_estructural.png` (y versión vectorial `docs/diagrama_estructural.svg`)
 - **Diagrama Mermaid (Estructura de Componentes):**
 ```mermaid
 graph TD
@@ -181,12 +184,15 @@ graph TD
         STORAGE -.-> F5["academic_log_decrypted.json (Recuperado)"]
     end
 ```
-- **Puntos a destacar:** Separación estricta de responsabilidades, ausencia de ciclos de dependencia y cero librerías criptográficas de terceros.
+- **Puntos a destacar:** Separación estricta de responsabilidades, ausencia de ciclos de dependencia, interfaces desacopladas (`GradeGenerator`, `SymmetricEncryptor`, `SymmetricDecryptor`), aislamiento cripto/almacenamiento en reposo y cero librerías criptográficas de terceros.
 
 ---
 
 ### Slide 9: Diagrama de Diseño 2: Comportamiento Secuencial
 - **Título:** Diagrama de Diseño 2: Ciclo de Vida Criptográfico (Pasos 1 al 10)
+- **Artefactos del Entregable:**
+  - Código fuente Mermaid: `docs/diagrama_comportamiento.mmd`
+  - Renderizado HD: `docs/diagrama_comportamiento.png` (y versión vectorial `docs/diagrama_comportamiento.svg`)
 - **Diagrama Mermaid (Flujo Temporal):**
 ```mermaid
 sequenceDiagram
@@ -212,6 +218,7 @@ sequenceDiagram
     Orch-->>CLI: PipelineResult
     CLI-->>User: Trazabilidad, Tabla Comparativa y Veredicto Gráfico
 ```
+- **Puntos a destacar:** Cobertura secuencial estricta de los 10 pasos, aislamiento de payload para evitar dependencias circulares, material criptográfico fresco (CSPRNG), verificación atómica del Auth Tag de AES-GCM y mitigación de timing attacks (`subtle.ConstantTimeCompare`).
 
 ---
 
@@ -296,13 +303,14 @@ sequenceDiagram
 
 ---
 
-### Slide 14: Conclusiones y Cumplimiento de Objetivos del Taller
-- **Título:** Conclusiones y Verificación de Requisitos
-- **Cumplimiento de Objetivos:**
-  - Ejecución integral y determinista de los 10 pasos requeridos para la protección de logs estructurados en reposo.
-  - La combinación de **hashing granular (SHA-256 sin circularidad)** y **cifrado autenticado (AES-256-GCM)** garantiza confidencialidad, integridad y detección inmediata de cualquier adulteración.
-  - El uso exclusivo de bibliotecas nativas de Go (`crypto/*`) asegura total portabilidad, alto rendimiento y cero dependencias de terceros para la seguridad.
+### Slide 14: Conclusiones, Lecciones Aprendidas y Trabajo Futuro
+- **Título:** Conclusiones y Proyección hacia Entornos Productivos
+- **Conclusiones Técnicas:**
+  - La combinación de **hashing granular (SHA-256 sin circularidad)** y **cifrado autenticado (AES-256-GCM)** provee una defensa en profundidad completa para datos en reposo.
+  - El uso de primitivas nativas de Go garantiza portabilidad, alto rendimiento y ausencia de vulnerabilidades derivadas de dependencias de terceros en criptografía.
 - **Lecciones Aprendidas:**
-  - Importancia del ordenamiento canónico en JSON para garantizar determinismo en el cómputo de digests.
-  - Uso mandatorio de comparación en tiempo constante (`crypto/subtle.ConstantTimeCompare`) para mitigar ataques de temporización.
-  - Eficiencia en el manejo de memoria mediante lectura por streaming $O(1)$ para resúmenes de archivos completos.
+  - La importancia de la serialización canónica para evitar falsos positivos en el cálculo de hashes de estructuras JSON.
+  - El riesgo de ataques de temporización (*timing attacks*) y cómo mitigarlos con `subtle.ConstantTimeCompare`.
+- **Evolución hacia Producción:**
+  - Transición del almacenamiento local de `crypto_metadata.json` hacia un servicio de custodia centralizado (**KMS / HashiCorp Vault / AWS KMS**).
+  - Implementación de firma digital asimétrica (ECDSA / Ed25519) para no repudio estricto con pares de llaves pública/privada por evaluador.
