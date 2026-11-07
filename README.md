@@ -53,4 +53,125 @@ El equipo deberá cargar en la plataforma Moodle del curso un archivo `.ZIP` con
 
 1. **Archivo .ZIP** con estructura de carpetas de código fuente en Go, incluyendo 2 diagramas de diseño: uno de estructura y otro de comportamiento.
 2. **Archivo .PDF** con diapositivas que comuniquen lo realizado en el taller y que sirva de apoyo para el video de sustentación y demostración del taller. Se deben incluir detalles y justificación de diseño y selección de funciones de hashing y criptrográficas. Incluir diapositiva de declaración de uso responsable de IA.
-3. **Enlace URL a video de sustentación** del taller, incluido en las diapositivas del proyecto, en el que intervengan todos los integrantes del equipo de trabajo.
+3. **Enlace URL a video de sustentación** del taller, incluido en las diapositivas del proyecto, en el que intervengan todos los integrantes del equipo de trabajo:
+   - **Video en YouTube:** [https://www.youtube.com/watch?v=noc2NYgj0c0](https://www.youtube.com/watch?v=noc2NYgj0c0)
+   - **Diapositivas Vectoriales:** [presentacion_taller2.pdf](presentacion_taller2.pdf) (o en [docs/presentacion_taller2.pdf](docs/presentacion_taller2.pdf))
+
+---
+
+## 🚀 Guía de Uso de la Utilidad CLI
+
+### 1. Requisitos Previos y Compilación
+
+- **Go:** versión 1.22 o superior (100% biblioteca estándar, Zero CGO).
+- **Entorno de terminal:** Bash, Zsh o Git Bash (en Windows obligatorio Git Bash para compatibilidad de comandos POSIX).
+
+```bash
+# Compilar binario en carpeta bin/
+go build -o bin/cli ./cmd/cli
+
+# O ejecutar directamente con go run
+go run ./cmd/cli [flags]
+```
+
+### 2. Modos de Ejecución
+
+#### Modo A: Interactivo con Menú Guiado (Por Defecto)
+Despliega una interfaz navegable con flechas del teclado (`↑` / `↓`) y selección con `Enter`:
+
+```bash
+go run ./cmd/cli
+```
+
+**Opciones disponibles en el menú:**
+1. `1. Ejecutar Flujo Completo (Pasos 1 al 10)`: ejecuta secuencialmente el pipeline completo, solicita volumen si no se indicó y presenta tablas de hashes y veredicto.
+2. `2. Paso 1: Definir volumen de eventos`: solicita interactivamente el número de eventos $N$ ($1 \le N \le 100\,000$).
+3. `3. Pasos 2-4: Generar eventos y log consolidado`: genera eventos estocásticos (`REGISTRO_NOTA`, `MODIFICACION_NOTA`), calcula el hash de payload determinista bajo RFC 8785 y escribe `output/academic_log.json`.
+4. `4. Pasos 5-7: Hashear y Cifrar log en reposo`: computa SHA-256 en claro (`output/academic_log.json.sha256`), cifra con AES-256-GCM (`output/academic_log.enc`), aísla secretos con permisos POSIX `0600` (`output/crypto_metadata.json`) y computa SHA-256 del ciphertext (`output/academic_log.enc.sha256`).
+5. `5. Pasos 8-9: Descifrar y validar integridad`: recupera el log mediante AES-256-GCM verificando el tag GMAC (`output/academic_log_decrypted.json`) y genera su digest (`output/academic_log_decrypted.sha256`).
+6. `6. Paso 10: Ver reporte de auditoría y comparativa de hashes`: ejecuta auditoría dual (hash macro de archivo y micro por registro) con comparación en tiempo constante (`subtle.ConstantTimeCompare`).
+7. `7. Salir`: finaliza la CLI.
+
+#### Modo B: Automático / Desatendido (CI/CD o Scripts)
+Ejecuta todo el pipeline (Pasos 1 al 10) de forma directa sin requerir interacción manual:
+
+```bash
+# Ejecutar pipeline completo con 25 eventos
+go run ./cmd/cli --auto -n 25
+
+# Usando el binario compilado
+./bin/cli --auto --events 50
+```
+
+### 3. Banderas (Flags) de la CLI
+
+| Bandera | Tipo | Valor por defecto | Descripción |
+| :--- | :---: | :---: | :--- |
+| `--auto` | booleano | `false` | Ejecuta el flujo completo (Pasos 1 al 10) sin abrir el menú interactivo. |
+| `-n`, `--events` | entero | vacío | Volumen de eventos $N$ a generar ($1 \le N \le 100\,000$). |
+| `--version` | booleano | `false` | Imprime la versión de la herramienta y finaliza. |
+| `-h`, `--help` | booleano | `false` | Muestra el menú de ayuda con todas las banderas disponibles. |
+
+### 4. Estructura de Artefactos Generados (`output/`)
+
+El sistema aísla los artefactos en el directorio local `output/` aplicando permisos POSIX restrictivos:
+
+```
+output/
+├── academic_log.json                # Paso 4: Log en texto claro (JSON estructurado)
+├── academic_log.json.sha256         # Paso 5: Hash SHA-256 del log original
+├── academic_log.enc                 # Paso 6: Log cifrado con AES-256-GCM + Tag GMAC (128-bit)
+├── crypto_metadata.json             # Paso 6: Clave AES de 256 bits y Nonce de 96 bits en hex (chmod 0600)
+├── academic_log.enc.sha256          # Paso 7: Hash SHA-256 del archivo cifrado
+├── academic_log_decrypted.json      # Paso 8: Log recuperado tras descifrado
+└── academic_log_decrypted.sha256   # Paso 9: Hash SHA-256 del log descifrado
+```
+
+- Permisos de directorio `output/`: `0700` (`drwx------`, acceso exclusivo del usuario propietario).
+- Permisos de archivo de secretos `crypto_metadata.json`: `0600` (`-rw-------`, lectura/escritura exclusiva del propietario).
+
+### 5. Pruebas de Resistencia Forense y Detección de Tampering
+
+#### Escenario 1: Bit-Flipping en Datos Cifrados en Reposo
+Simula la alteración de 1 byte en el archivo cifrado. AES-256-GCM detecta la mutación gracias al tag GMAC y aborta antes de emitir texto en claro:
+
+```bash
+# 1. Ejecutar pipeline base
+go run ./cmd/cli --auto -n 10
+
+# 2. Corromper 1 byte del archivo cifrado
+python3 -c 'b=bytearray(open("output/academic_log.enc","rb").read()); b[0x4A]^=0xFF; open("output/academic_log.enc","wb").write(b)'
+
+# 3. Intentar descifrar
+go run ./cmd/cli # Seleccionar Opción 5: Descifrar
+# Resultado: ✖ failed to decrypt log file: cipher authentication tag mismatch: data tampered
+```
+
+#### Escenario 2: Manipulación Silenciosa de Datos en Claro
+Simula la alteración de una calificación dentro del archivo descifrado. El auditor detecta la divergencia en el hash de archivo y en el hash canónico del registro individual:
+
+```bash
+# 1. Modificar fraudulentamente una nota en el log descifrado
+sed -i 's/"grade": [0-9.]*/"grade": 0.0/' output/academic_log_decrypted.json
+
+# 2. Correr la auditoría forense
+go run ./cmd/cli # Seleccionar Opción 6: Auditoría
+# Resultado: [ ✘ ] ALERTA DE SEGURIDAD: VIOLACIÓN DE INTEGRIDAD DETECTADA
+# Identifica con precisión: [✘] EVT-REG-00003: Payload Hash Discrepancy!
+```
+
+### 6. Códigos de Salida POSIX (Exit Codes)
+
+| Código | Significado |
+| :---: | :--- |
+| `0` | Ejecución exitosa y/o integridad forense 100% preservada. |
+| `1` | Error en pipeline o violación de integridad detectada en auditoría. |
+| `2` | Parámetros de entrada o banderas de CLI inválidas. |
+
+### 7. Ejecución de la Suite de Pruebas
+
+Para ejecutar las pruebas unitarias, de integración, concurrencia y detección de anomalías:
+
+```bash
+go test -v -race ./...
+```

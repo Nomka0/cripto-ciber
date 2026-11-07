@@ -477,6 +477,10 @@
               <div class="body" style="color: #ECECE8; max-width: 85%;">
                 Taller 2 de Criptografía y Seguridad en Redes • Escuela de Ingeniería de Sistemas y Computación • Santiago de Cali, 2026.
               </div>
+              <div style="margin-top: 14px; display: inline-flex; align-items: center; gap: 10px; background: rgba(230, 255, 61, 0.12); border: 1.5px solid var(--accent-lemon); padding: 8px 14px;">
+                <span style="color: var(--accent-lemon); font-family: var(--font-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.05em;">▶ VIDEO SUSTENTACIÓN:</span>
+                <a href="https://www.youtube.com/watch?v=noc2NYgj0c0" target="_blank" rel="noopener noreferrer" style="color: #FFFFFF; font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;">https://www.youtube.com/watch?v=noc2NYgj0c0</a>
+              </div>
             </div>
           </div>
 
@@ -1238,10 +1242,9 @@ isEqual := subtle.ConstantTimeCompare(
               </div>
               <pre class="code-block" style="color: #FF5555; background: #000; margin-top: 6px; font-size: 10px; border-left: 3px solid #FF5555;"><code># Mutación de 1 byte en offset de ciphertext
 $ python3 -c 'b=bytearray(open("output/academic_log.enc","rb").read()); b[0x4A]^=0xFF; open("output/academic_log.enc","wb").write(b)'
-$ go run ./cmd/cli --auto -n 5
-[06] Cifrado Reposo: AES-256-GCM OK
-[08] Descifrado:
-panic: cipher: message authentication failed</code></pre>
+$ go run ./cmd/cli # Opción 5: Descifrar
+✖ failed to decrypt log file:
+cipher authentication tag mismatch: data tampered</code></pre>
             </div>
             <div style="background: rgba(255,255,255,0.08); padding: 8px 12px; border-left: 3px solid var(--accent-lemon);">
               <div class="card-h3" style="font-size: 13px; color: var(--accent-lemon);">DEFENSA ATÓMICA AEAD</div>
@@ -1347,9 +1350,18 @@ PASS: 30+ tests unitarios, concurrencia y tampering (100% OK, Cobertura 100%)</c
                 <li><strong>Higiene Anti-Canal Lateral:</strong> Sustitución estricta de comparadores estándar por <code>subtle.ConstantTimeCompare</code> para comparaciones en tiempo invariante, neutralizando ataques de temporización (Timing Attacks).</li>
               </ul>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px;">
-              <div class="label-sm" style="color: var(--accent-lemon); font-size: 12.5px;">CUMPLIMIENTO: 100% DE REQUISITOS DEL TALLER 2 • ZERO CGO (100% GO NATIVO) • NIST & RFC 8785</div>
-              <pre class="code-block" style="font-size: 11px; background: #000; color: #A3FFA3; padding: 6px 14px; margin: 0;"><code>$ go test -v -race ./...  # 30+ tests PASS (100% OK)</code></pre>
+            <div>
+              <div style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; background: rgba(230, 255, 61, 0.10); border: 1.5px solid var(--accent-lemon); padding: 8px 14px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="color: var(--accent-lemon); font-family: var(--font-mono); font-weight: 700; font-size: 11.5px; letter-spacing: 0.05em;">▶ VIDEO SUSTENTACIÓN EN YOUTUBE:</span>
+                  <a href="https://www.youtube.com/watch?v=noc2NYgj0c0" target="_blank" rel="noopener noreferrer" style="color: #FFFFFF; font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px;">https://www.youtube.com/watch?v=noc2NYgj0c0</a>
+                </div>
+                <div class="label-sm" style="color: var(--accent-lemon); font-size: 11px;">SUSTENTACIÓN GRUPAL COMPLETA</div>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 12px;">
+                <div class="label-sm" style="color: var(--accent-lemon); font-size: 12.5px;">CUMPLIMIENTO: 100% DE REQUISITOS DEL TALLER 2 • ZERO CGO (100% GO NATIVO) • NIST & RFC 8785</div>
+                <pre class="code-block" style="font-size: 11px; background: #000; color: #A3FFA3; padding: 6px 14px; margin: 0;"><code>$ go test -v -race ./...  # 30+ tests PASS (100% OK)</code></pre>
+              </div>
             </div>
           </div>
         </div>
