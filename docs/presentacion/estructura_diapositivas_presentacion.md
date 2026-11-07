@@ -37,6 +37,7 @@
   - *Steven Nieves* (Rol: Cifrado AES-256-GCM y Gestión de Secretos)
   - *Juan José Bolaños* (Rol: Orquestación Pipeline, CLI y Pruebas de Tampering)
 - **Badges y Estándares:** Go 1.22+ • RFC 8785 • Zero CGO • NIST FIPS 180-4 • NIST SP 800-38D.
+- **Video de Sustentación (YouTube):** [https://www.youtube.com/watch?v=noc2NYgj0c0](https://www.youtube.com/watch?v=noc2NYgj0c0)
 - **Comando en Pantalla:**
   ```bash
   $ go run ./cmd/cli --auto -n 25
@@ -262,8 +263,8 @@ sequenceDiagram
 - **Escenario 1: Corrupción en Reposo (Bit-Flipping en Ciphertext):**
   ```bash
   $ python3 -c 'b=bytearray(open("output/academic_log.enc","rb").read()); b[0x4A]^=0xFF; open("output/academic_log.enc","wb").write(b)'
-  $ go run ./cmd/cli --auto -n 5
-  # Resultado: panic: cipher: message authentication failed (Tag GMAC aborta)
+  $ go run ./cmd/cli # Opción 5: Descifrar y validar integridad
+  # Resultado: ✖ failed to decrypt log file: ... cipher authentication tag mismatch: data tampered or corrupted
   ```
 - **Escenario 2: Adulteración en Claro (Manipulación Selectiva de Nota):**
   ```bash
@@ -306,3 +307,4 @@ sequenceDiagram
   ```bash
   $ go test -v -race ./...
   ```
+- **Video de Sustentación (YouTube):** [https://www.youtube.com/watch?v=noc2NYgj0c0](https://www.youtube.com/watch?v=noc2NYgj0c0)

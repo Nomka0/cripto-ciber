@@ -2,6 +2,7 @@
 ## Proyecto: Protección de Logs Estructurados en Reposo (Taller 2 – Criptografía)
 
 > **Documento Maestro de Coordinación Audiovisual (Entregable 3)**  
+> **Enlace Oficial del Video (YouTube):** [https://www.youtube.com/watch?v=noc2NYgj0c0](https://www.youtube.com/watch?v=noc2NYgj0c0)  
 > **Duración estimada:** 10 – 12 minutos  
 > **Plataforma recomendada:** Zoom, Google Meet u OBS Studio (grabación de pantalla completa con cámaras de los 4 integrantes encendidas).  
 > **Requisito del curso:** Participación verbal y visual equitativa de los 4 integrantes.
@@ -173,10 +174,12 @@ flowchart LR
 * **Comando que Juan José Bolaños ejecuta en terminal (Ataque Bit-Flip):**
   ```bash
   python3 -c 'b=bytearray(open("output/academic_log.enc","rb").read()); b[0x4A]^=0xFF; open("output/academic_log.enc","wb").write(b)'
-  go run ./cmd/cli --auto -n 5
+  go run ./cmd/cli
   ```
+  *(Juan José selecciona en el menú interactivo con las flechas la **Opción 5: Pasos 8-9: Descifrar y validar integridad** y presiona Enter)*.
+
 * **Guion Juan José Bolaños (mostrando el error en consola):**
-  > *"Observen la consola: `panic: cipher: message authentication failed`. El Tag GMAC detectó la inversión de un solo bit en el archivo cifrado y abortó inmediatamente el descifrado antes de exponer texto claro adulterado en la memoria.*  
+  > *"Observen la consola: `failed to decrypt log file: decryption failed: cipher authentication tag mismatch: data tampered or corrupted`. El Tag GMAC detectó la inversión de un solo bit en el archivo cifrado y abortó inmediatamente el descifrado antes de exponer texto claro adulterado en la memoria.*  
   > *Segundo ataque: restauremos una corrida limpia y alteremos deliberadamente una nota en texto claro dentro del log descifrado para probar el detector pericial:"*
 
 * **Comandos que Juan José Bolaños ejecuta en terminal (Ataque Quirúrgico de Nota):**
